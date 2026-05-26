@@ -48,49 +48,49 @@ engine = create_engine(DATABASE_URL)
 def init_users_table():
 
     with engine.begin() as conn:
-
         conn.exec_driver_sql("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
-                fullname TEXT,
-                position TEXT,
                 role TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending'
             )
         """)
 
-        try:
-            conn.exec_driver_sql(
-                "ALTER TABLE users ADD COLUMN fullname TEXT"
-            )
-        except:
-            pass
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS fullname TEXT"
+        )
 
-        try:
-            conn.exec_driver_sql(
-                "ALTER TABLE users ADD COLUMN position TEXT"
-            )
-        except:
-            pass
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS position TEXT"
+        )
 
-        
+    with engine.begin() as conn:
         result = conn.exec_driver_sql(
             "SELECT COUNT(*) FROM users WHERE role = %s",
             ("super_admin",)
-        )
-
-        super_admin_count = result.fetchone()[0]
-        
+        ).scalar()
 
         if result == 0:
-            conn.exec_driver_sql("""
-                INSERT INTO users (username, password, role, status)
-                VALUES ('superadmin', 'superadmin123', 'super_admin', 'approved')
-            """)
-
-init_users_table()
+            conn.exec_driver_sql(
+                """
+                INSERT INTO users
+                (username, password, fullname, position, role, status)
+                VALUES
+                (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    "superadmin",
+                    "superadmin123",
+                    "Super Admin",
+                    "System Administrator",
+                    "super_admin",
+                    "approved"
+                )
+            )
 
 
 def load_data():
