@@ -34,6 +34,10 @@
             <a href="/reports">📊 Reports</a>
         {% endif %}
 
+        {% if session.get("role") == "admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+        {% endif %}
+
         <a href="/logout">🚪 Logout</a>
 
     </div>
