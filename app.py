@@ -278,32 +278,38 @@ def login():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    error = ""
+    success = ""
 
     if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        role = request.form.get("role")
 
-        username = request.form["username"]
-        password = request.form["password"]
-        role = request.form["role"]
+        if role not in ["admin_jhs_shs", "admin_college", "assistant"]:
+            error = "Invalid role selected"
+        else:
+            try:
+                with engine.begin() as conn:
+                    conn.exec_driver_sql(
+                        """
+                        INSERT INTO users (username, password, role, status)
+                        VALUES (%s, %s, %s, 'pending')
+                        """,
+                        (username, password, role)
+                    )
 
-        users = load_users()
+                success = "Account registered. Please wait for Super Admin approval."
 
-        if username in users:
-            return render_template(
-                "register.html",
-                error="Username already exists"
-            )
+            except Exception as e:
+                print("REGISTER ERROR:", e)
+                error = "Username already exists"
 
-        users[username] = {
-            "password": password,
-            "role": role,
-            "approved": False
-        }
-
-        save_users(users)
-
-        return redirect("/login")
-
-    return render_template("register.html")
+    return render_template(
+        "register.html",
+        error=error,
+        success=success
+    )
 
 
 @app.route("/manage_accounts")
@@ -360,7 +366,7 @@ def logout():
 
 @app.before_request
 def protect_pages():
-    allowed_routes = ["login", "static"]
+    allowed_routes = ["login", "register", "static"]
 
     if request.endpoint in allowed_routes:
         return
