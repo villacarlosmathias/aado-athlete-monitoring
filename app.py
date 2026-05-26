@@ -35,9 +35,20 @@ def load_data():
             "SELECT * FROM grades",
             engine
         )
+
+        # Compatibility fix:
+        # Old SQLite used "Sports Events"; PostgreSQL table may use "Sport".
+        # This makes both names available so old templates/routes will not crash.
+        if "Sport" in df.columns and "Sports Events" not in df.columns:
+            df["Sports Events"] = df["Sport"]
+
+        if "Sports Events" in df.columns and "Sport" not in df.columns:
+            df["Sport"] = df["Sports Events"]
+
         return df
 
-    except:
+    except Exception as e:
+        print("LOAD DATA ERROR:", e)
         return pd.DataFrame()
 
 
@@ -398,7 +409,8 @@ def add_grade(student_id):
                 "Course / Program": student.get("Course / Program", ""),
                 "College": student.get("College", ""),
 
-                "Sports Events": student["Sports Events"],
+                "Sports Events": student.get("Sports Events", student.get("Sport", "")),
+                "Sport": student.get("Sport", student.get("Sports Events", "")),
 
                 "Academic Year": academic_year,
 
@@ -610,8 +622,19 @@ def edit_grades(student_id):
 def grades():
     df = load_data()
 
-    if not df.empty:
-        df["Term"] = df["Term"].apply(normalize_term)
+    if df.empty:
+        return render_template(
+            "grades.html",
+            matched_students=pd.DataFrame(),
+            grouped_records={},
+            show_value=show_value,
+            sports=[],
+            academic_years=[],
+            terms=[],
+            grade_levels=[]
+        )
+
+    df["Term"] = df["Term"].apply(normalize_term)
 
     search = request.args.get("search", "")
     selected_id = request.args.get("student_id", "")
@@ -1317,6 +1340,17 @@ def reports():
 
     df = load_data()
 
+    if df.empty:
+        return render_template(
+            "reports.html",
+            sports=[],
+            jhs_sports=[],
+            shs_sports=[],
+            academic_years=[],
+            terms=[],
+            grade_levels=[]
+        )
+
     sports = sorted(
         df["Sports Events"]
         .dropna()
@@ -1412,6 +1446,7 @@ def add_student():
             "Course / Program": course_program,
             "College": college_department,
             "Sports Events": sport,
+            "Sport": sport,
             "Academic Year": academic_year,
             "Term": "",
             "Subject_Display": "",
