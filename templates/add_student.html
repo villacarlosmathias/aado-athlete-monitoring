@@ -27,6 +27,13 @@
             <a href="/reports">📊 Reports</a>
         {% endif %}
 
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+        {% endif %}
+
+<a href="/logout">🚪 Logout</a>
+
         <a href="/logout">🚪 Logout</a>
 
     </div>

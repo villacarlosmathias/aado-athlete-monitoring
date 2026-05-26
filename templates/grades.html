@@ -27,8 +27,9 @@
         <a href="/reports">📊 Reports</a>
     {% endif %}
 
-    {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+    {% if session.get("role") == "super_admin" %}
         <a href="/promote_students">⬆️ Promote Students</a>
+        <a href="/manage_accounts">👤 Manage Accounts</a>
     {% endif %}
 
    <a href="/logout">🚪 Logout</a>
@@ -40,7 +41,7 @@
 
     <div class="topbar">
         <h2>Grades</h2>
-        <h3>Hi, Mathias Jr</h3>
+        <h3>Hi, {{ session.get("username", "User") }}</h3>
     </div>
 
     <!-- SEARCH -->
