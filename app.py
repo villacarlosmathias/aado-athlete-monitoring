@@ -295,7 +295,7 @@ def student_list():
             show_value=show_value
         )
 
-    sports = sorted(df["Sports Events"].dropna().astype(str).unique())
+    sports = sorted(df["Sport"].dropna().astype(str).unique())
     grade_levels = sorted(df["Grade Level"].dropna().astype(str).unique())
 
     filtered_df = df.copy()
