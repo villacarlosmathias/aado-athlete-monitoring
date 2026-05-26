@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Register Account</title>
+    <title>Register</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
@@ -11,17 +11,10 @@
 
     <div class="login-card">
 
-        <h1>AADO Monitoring</h1>
-        <p class="subtitle">Register New Account</p>
+        <h1>Create Admin Account</h1>
 
         {% if error %}
-            <div class="login-error">{{ error }}</div>
-        {% endif %}
-
-        {% if success %}
-            <div style="background:#e8f5e9; color:#2e7d32; padding:10px; border-radius:10px; margin-bottom:15px;">
-                {{ success }}
-            </div>
+            <p style="color:red;">{{ error }}</p>
         {% endif %}
 
         <form method="POST">
@@ -31,20 +24,16 @@
             <input type="password" name="password" placeholder="Password" required>
 
             <select name="role" required>
-                <option value="">Select Account Type</option>
-                <option value="admin_jhs_shs">Admin - JHS / SHS</option>
-                <option value="admin_college">Admin - College</option>
-                <option value="assistant">Assistant Encoder</option>
+                <option value="">Select Role</option>
+                <option value="admin_jhs_shs">JHS / SHS Admin</option>
+                <option value="admin_college">College Admin</option>
             </select>
 
-            <button type="submit">Register</button>
+            <button type="submit">
+                Register
+            </button>
 
         </form>
-
-        <p style="margin-top:20px;">
-            Already have an account?
-            <a href="/login">Login here</a>
-        </p>
 
     </div>
 

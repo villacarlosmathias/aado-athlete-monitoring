@@ -14,6 +14,23 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
+import json
+import os
+
+USERS_FILE = "users.json"
+
+def load_users():
+
+    if not os.path.exists(USERS_FILE):
+        return {}
+
+    with open(USERS_FILE, "r") as f:
+        return json.load(f)
+
+def save_users(users):
+
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=4)
 
 
 app = Flask(__name__)
@@ -261,38 +278,32 @@ def login():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    error = ""
-    success = ""
 
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        role = request.form.get("role")
 
-        if role not in ["admin_jhs_shs", "admin_college", "assistant"]:
-            error = "Invalid role selected"
+        username = request.form["username"]
+        password = request.form["password"]
+        role = request.form["role"]
 
-        else:
-            try:
-                with engine.begin() as conn:
-                    conn.exec_driver_sql(
-                        """
-                        INSERT INTO users (username, password, role, status)
-                        VALUES (%s, %s, %s, 'pending')
-                        """,
-                        (username, password, role)
-                    )
+        users = load_users()
 
-                success = "Account registered. Please wait for Super Admin approval."
+        if username in users:
+            return render_template(
+                "register.html",
+                error="Username already exists"
+            )
 
-            except:
-                error = "Username already exists"
+        users[username] = {
+            "password": password,
+            "role": role,
+            "approved": False
+        }
 
-    return render_template(
-        "register.html",
-        error=error,
-        success=success
-    )
+        save_users(users)
+
+        return redirect("/login")
+
+    return render_template("register.html")
 
 
 @app.route("/manage_accounts")
