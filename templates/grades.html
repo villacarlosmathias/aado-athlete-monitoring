@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Grades</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+
+    {% if session.get("role") == "admin" %}
+        <a href="/">🏠 Dashboard</a>
+    {% endif %}
+
+    <a href="/student_list">👥 Student List</a>
+    <a href="/add_student">➕ Add New Student</a>
+
+    {% if session.get("role") == "admin" %}
+        <a href="/grades">📘 Grades</a>
+        <a href="/reports">📊 Reports</a>
+    {% endif %}
+
+   <a href="/logout">🚪 Logout</a>
+
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Grades</h2>
+        <h3>Hi, Mathias Jr</h3>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="card">
+        <h2>Search Grades</h2>
+
+        <form method="GET">
+            <div class="filter-grid">
+
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search Student Name or ID"
+                    value="{{ request.args.get('search', '') }}"
+                >
+
+                <button class="btn" type="submit">
+                    Search
+                </button>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- SEARCH RESULTS -->
+    {% if not matched_students.empty %}
+
+    <div class="card">
+
+        <h2>Select Student</h2>
+
+        <table class="grades-table">
+
+            <tr>
+                <th>Student ID</th>
+                <th>Name</th>
+                <th>Grade Level</th>
+                <th>Sport</th>
+                <th>Action</th>
+            </tr>
+
+            {% for _, s in matched_students.iterrows() %}
+            <tr>
+
+                <td>{{ show_value(s.get("Student ID")) }}</td>
+
+                <td class="subject-text">
+                    {{ show_value(s.get("Full Name")) }}
+                </td>
+
+                <td>{{ show_value(s.get("Grade Level")) }}</td>
+
+                <td>{{ show_value(s.get("Sports Events")) }}</td>
+
+                <td>
+                    <a
+                        class="table-btn add-btn"
+                        href="/grades?student_id={{ s.get('Student ID') }}"
+                    >
+                        View Grades
+                    </a>
+                </td>
+
+            </tr>
+            {% endfor %}
+
+        </table>
+
+    </div>
+
+    {% endif %}
+
+    <!-- GRADE RECORDS -->
+    {% for group_title, records in grouped_records.items() %}
+
+    <div class="card">
+
+        <div class="term-header">
+            {{ group_title }}
+        </div>
+
+        <table class="grades-table">
+
+            {% set first = records[0] %}
+
+            <!-- JHS -->
+            {% if first["Type"] == "JHS" %}
+
+            <tr>
+                <th>Subject</th>
+                <th>Q1</th>
+                <th>Q2</th>
+                <th>Q3</th>
+                <th>Q4</th>
+                <th>Average</th>
+                <th>Remarks</th>
+            </tr>
+
+            {% for row in records %}
+            <tr>
+
+                <td class="subject-text">
+                    {{ show_value(row.get("Subject_Display")) }}
+                </td>
+
+                <td>{{ show_value(row.get("Q1")) }}</td>
+                <td>{{ show_value(row.get("Q2")) }}</td>
+                <td>{{ show_value(row.get("Q3")) }}</td>
+                <td>{{ show_value(row.get("Q4")) }}</td>
+
+                <td>
+
+                    {% set grades = [] %}
+
+                    {% if show_value(row.get("Q1")) != "" %}
+                        {% set _ = grades.append(row.get("Q1")|float) %}
+                    {% endif %}
+
+                    {% if show_value(row.get("Q2")) != "" %}
+                        {% set _ = grades.append(row.get("Q2")|float) %}
+                    {% endif %}
+
+                    {% if show_value(row.get("Q3")) != "" %}
+                        {% set _ = grades.append(row.get("Q3")|float) %}
+                    {% endif %}
+
+                    {% if show_value(row.get("Q4")) != "" %}
+                        {% set _ = grades.append(row.get("Q4")|float) %}
+                    {% endif %}
+
+                    {% if grades|length > 0 %}
+                        {{ ((grades|sum / grades|length) + 0.5)|int }}
+                    {% else %}
+                        NO GRADE
+                    {% endif %}
+
+                </td>
+
+                <td
+                    class="
+                    {% if grades|length > 0 %}
+                        {% set avg = ((grades|sum / grades|length) + 0.5)|int %}
+                        {% if avg >= 75 %}
+                            passed
+                        {% else %}
+                            failed
+                        {% endif %}
+                    {% else %}
+                        no-grade
+                    {% endif %}
+                    "
+                >
+
+                    {% if grades|length > 0 %}
+
+                        {% set avg = ((grades|sum / grades|length) + 0.5)|int %}
+
+                        {% if avg >= 75 %}
+                            PASSED
+                        {% else %}
+                            FAILED
+                        {% endif %}
+
+                    {% else %}
+
+                        NO GRADE
+
+                    {% endif %}
+
+                </td>
+
+            </tr>
+            {% endfor %}
+
+            <!-- SHS -->
+            {% else %}
+
+            <tr>
+                <th>Subject</th>
+                <th>Midterm</th>
+                <th>Final</th>
+                <th>Average</th>
+                <th>Remarks</th>
+            </tr>
+
+            {% for row in records %}
+            <tr>
+
+                <td class="subject-text">
+                    {{ show_value(row.get("Subject_Display")) }}
+                </td>
+
+                <td>{{ show_value(row.get("Midterm")) }}</td>
+
+                <td>{{ show_value(row.get("Final")) }}</td>
+
+                <td>
+
+                    {% if show_value(row.get("Midterm")) != "" and show_value(row.get("Final")) != "" %}
+
+                        {{ (((row.get("Midterm")|float + row.get("Final")|float) / 2) + 0.5)|int }}
+
+                    {% elif show_value(row.get("Midterm")) != "" %}
+
+                        {{ (row.get("Midterm")|float + 0.5)|int }}
+
+                    {% elif show_value(row.get("Final")) != "" %}
+
+                        {{ (row.get("Final")|float + 0.5)|int }}
+
+                    {% else %}
+
+                        NO GRADE
+
+                    {% endif %}
+
+                </td>
+
+                <td
+                    class="
+                    {% if show_value(row.get('Midterm')) != '' and show_value(row.get('Final')) != '' %}
+
+                        {% set avg = (((row.get('Midterm')|float + row.get('Final')|float) / 2) + 0.5)|int %}
+
+                        {% if avg >= 75 %}
+                            passed
+                        {% else %}
+                            failed
+                        {% endif %}
+
+                    {% elif show_value(row.get('Midterm')) != '' %}
+
+                        {% if (row.get('Midterm')|float + 0.5)|int >= 75 %}
+                            passed
+                        {% else %}
+                            failed
+                        {% endif %}
+
+                    {% elif show_value(row.get('Final')) != '' %}
+
+                        {% if (row.get('Final')|float + 0.5)|int >= 75 %}
+                            passed
+                        {% else %}
+                            failed
+                        {% endif %}
+
+                    {% else %}
+
+                        no-grade
+
+                    {% endif %}
+                    "
+                >
+
+                    {% if show_value(row.get("Midterm")) != "" and show_value(row.get("Final")) != "" %}
+
+                        {% set avg = (((row.get("Midterm")|float + row.get("Final")|float) / 2) + 0.5)|int %}
+
+                        {% if avg >= 75 %}
+                            PASSED
+                        {% else %}
+                            FAILED
+                        {% endif %}
+
+                    {% elif show_value(row.get("Midterm")) != "" %}
+
+                        {% if (row.get("Midterm")|float + 0.5)|int >= 75 %}
+                            PASSED
+                        {% else %}
+                            FAILED
+                        {% endif %}
+
+                    {% elif show_value(row.get("Final")) != "" %}
+
+                        {% if (row.get("Final")|float + 0.5)|int >= 75 %}
+                            PASSED
+                        {% else %}
+                            FAILED
+                        {% endif %}
+
+                    {% else %}
+
+                        NO GRADE
+
+                    {% endif %}
+
+                </td>
+
+            </tr>
+            {% endfor %}
+
+            {% endif %}
+
+        </table>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+</body>
+</html>

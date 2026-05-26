@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Grades</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+   <div class="menu">
+        <a href="/">🏠 Dashboard</a>
+        <a href="/student_list">👥 Student List</a>
+        <a href="/grades">📘 Grades</a>
+        <a href="/reports">📊 Reports</a>
+        <a href="/logout">🚪 Logout</a>
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Edit Grades</h2>
+        <h3>Hi, Mathias Jr</h3>
+    </div>
+
+    <div class="card">
+        <h2>Student Information</h2>
+        <p><b>Student ID:</b> {{ student["Student ID"] }}</p>
+        <p><b>Name:</b> {{ student["Full Name"] }}</p>
+        <p><b>Grade Level:</b> {{ student["Grade Level"] }}</p>
+        <p><b>Sport:</b> {{ student["Sports Events"] }}</p>
+    </div>
+
+    <div class="card">
+        <h2>Edit Grades</h2>
+
+        <form method="POST">
+
+            {% for group_title, records in grouped_records.items() %}
+
+            <div class="term-header">
+                {{ group_title }}
+            </div>
+
+            <table class="grades-table">
+
+                {% if student_level == "JHS" %}
+
+                <tr>
+                    <th>Subject</th>
+                    <th>Q1</th>
+                    <th>Q2</th>
+                    <th>Q3</th>
+                    <th>Q4</th>
+                    <th>Final Grade</th>
+                    <th>Remarks</th>
+                    <th>Action</th>
+                </tr>
+
+                {% for r in records %}
+                <tr>
+                    <input type="hidden" name="row_index[]" value="{{ r['index'] }}">
+
+                    <td class="subject-text">
+                        {{ show_value(r.get("Subject_Display")) }}
+                    </td>
+
+                    <td>
+                        <input type="number" step="0.01" name="q1_{{ r['index'] }}" value="{{ show_value(r.get('Q1')) }}">
+                    </td>
+
+                    <td>
+                        <input type="number" step="0.01" name="q2_{{ r['index'] }}" value="{{ show_value(r.get('Q2')) }}">
+                    </td>
+
+                    <td>
+                        <input type="number" step="0.01" name="q3_{{ r['index'] }}" value="{{ show_value(r.get('Q3')) }}">
+                    </td>
+
+                    <td>
+                        <input type="number" step="0.01" name="q4_{{ r['index'] }}" value="{{ show_value(r.get('Q4')) }}">
+                    </td>
+
+                    <td>{{ show_value(r.get("Final Term Grade")) }}</td>
+                    <td>{{ show_value(r.get("Remarks")) }}</td>
+
+                    <td>
+                        <a
+                            class="table-btn delete-btn"
+                            href="/delete_grade/{{ r['index'] }}/{{ student['Student ID'] }}"
+                            onclick="return confirm('Delete this subject?')"
+                        >
+                            Delete
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% else %}
+
+                <tr>
+                    <th>Subject</th>
+                    <th>Midterm</th>
+                    <th>Final</th>
+                    <th>Final Grade</th>
+                    <th>Remarks</th>
+                    <th>Action</th>
+                </tr>
+
+                {% for r in records %}
+                <tr>
+                    <input type="hidden" name="row_index[]" value="{{ r['index'] }}">
+
+                    <td class="subject-text">
+                        {{ show_value(r.get("Subject_Display")) }}
+                    </td>
+
+                    <td>
+                        <input type="number" step="0.01" name="midterm_{{ r['index'] }}" value="{{ show_value(r.get('Midterm')) }}">
+                    </td>
+
+                    <td>
+                        <input type="number" step="0.01" name="final_{{ r['index'] }}" value="{{ show_value(r.get('Final')) }}">
+                    </td>
+
+                    <td>{{ show_value(r.get("Final Term Grade")) }}</td>
+                    <td>{{ show_value(r.get("Remarks")) }}</td>
+
+                    <td>
+                        <a
+                            class="table-btn delete-btn"
+                            href="/delete_grade/{{ r['index'] }}/{{ student['Student ID'] }}"
+                            onclick="return confirm('Delete this subject?')"
+                        >
+                            Delete
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% endif %}
+
+            </table>
+
+            {% endfor %}
+
+            <button class="btn" type="submit">
+                Save Updated Grades
+            </button>
+
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>

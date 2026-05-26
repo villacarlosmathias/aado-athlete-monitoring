@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add New Student</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+
+        {% if session.get("role") == "admin" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+
+        {% if session.get("role") == "admin" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
+
+        <a href="/logout">🚪 Logout</a>
+
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Add New Student Athlete</h2>
+        <h3>Hi, {{ session.get("username", "User") }}</h3>
+    </div>
+
+    <div class="card">
+        <h2>Student Information</h2>
+
+        <form method="POST">
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label>Student ID</label>
+                    <input type="text" name="student_id" placeholder="Example: 2026-000001" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="full_name" placeholder="Example: Dela Cruz, Juan" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Grade Level</label>
+                    <select name="grade_level" id="grade_level" required onchange="toggleCollegeFields()">
+                        <option value="">Select Level</option>
+                        <option value="Grade 7">Grade 7</option>
+                        <option value="Grade 8">Grade 8</option>
+                        <option value="Grade 9">Grade 9</option>
+                        <option value="Grade 10">Grade 10</option>
+                        <option value="Grade 11">Grade 11</option>
+                        <option value="Grade 12">Grade 12</option>
+                        <option value="College">College</option>
+                    </select>
+                </div>
+
+                <div id="jhsShsFields" class="form-group">
+                    <label>Section</label>
+                    <input type="text" name="section" placeholder="Example: St. Matthew / STEM 12-A">
+                </div>
+
+                <div id="strandField" class="form-group" style="display:none;">
+                    <label>Strand</label>
+                    <select name="strand">
+                        <option value="">Select Strand</option>
+                        <option value="STEM">STEM</option>
+                        <option value="ABM">ABM</option>
+                        <option value="HUMSS">HUMSS</option>
+                        <option value="GAS">GAS</option>
+                        <option value="TVL">TVL</option>
+                    </select>
+                </div>
+
+                <div id="collegeFields" style="display:none; grid-column: span 2;">
+                    <div class="form-grid">
+
+                        <div class="form-group">
+                            <label>Year Level</label>
+                            <select name="year_level">
+                                <option value="">Select Year Level</option>
+                                <option value="1st Year">1st Year</option>
+                                <option value="2nd Year">2nd Year</option>
+                                <option value="3rd Year">3rd Year</option>
+                                <option value="4th Year">4th Year</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Course / Program</label>
+                            <input type="text" name="course_program" placeholder="Example: BS Information Technology">
+                        </div>
+
+                        <div class="form-group">
+                            <label>College / Department</label>
+                            <input type="text" name="college_department" placeholder="Example: College of Computing">
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Sports Events</label>
+                    <select name="sport" required>
+                        <option value="">Select Sport</option>
+                        <option value="Badminton">Badminton</option>
+                        <option value="Baseball - Boys">Baseball - Boys</option>
+                        <option value="Basketball - Boys">Basketball - Boys</option>
+                        <option value="Basketball - Girls">Basketball - Girls</option>
+                        <option value="Chess">Chess</option>
+                        <option value="Lawn Tennis">Lawn Tennis</option>
+                        <option value="PEP Squad">PEP Squad</option>
+                        <option value="Taekwando">Taekwando</option>
+                        <option value="Volleyball - Boys">Volleyball - Boys</option>
+                        <option value="Volleyball - Girls">Volleyball - Girls</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Academic Year</label>
+                    <input type="text" name="academic_year" value="2026-2027" required>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <button class="btn" type="submit">
+                    Save Student
+                </button>
+
+                <a href="/student_list" class="table-btn delete-btn">
+                    Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<script>
+function toggleCollegeFields() {
+    const gradeLevel = document.getElementById("grade_level").value;
+    const collegeFields = document.getElementById("collegeFields");
+    const strandField = document.getElementById("strandField");
+    const jhsShsFields = document.getElementById("jhsShsFields");
+
+    if (gradeLevel === "College") {
+        collegeFields.style.display = "block";
+        jhsShsFields.style.display = "none";
+        strandField.style.display = "none";
+    } else {
+        collegeFields.style.display = "none";
+        jhsShsFields.style.display = "flex";
+
+        if (gradeLevel === "Grade 12") {
+            strandField.style.display = "flex";
+        } else {
+            strandField.style.display = "none";
+        }
+    }
+}
+
+window.onload = toggleCollegeFields;
+</script>
+
+</body>
+</html>
