@@ -46,16 +46,34 @@ DATABASE_URL = os.environ.get(
 engine = create_engine(DATABASE_URL)
 
 def init_users_table():
+
     with engine.begin() as conn:
+
         conn.exec_driver_sql("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
+                fullname TEXT,
+                position TEXT,
                 role TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending'
             )
         """)
+
+        try:
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN fullname TEXT"
+            )
+        except:
+            pass
+
+        try:
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN position TEXT"
+            )
+        except:
+            pass
 
         result = conn.exec_driver_sql(
             "SELECT COUNT(*) FROM users WHERE role = 'super_admin'"
@@ -282,27 +300,62 @@ def register():
     success = ""
 
     if request.method == "POST":
+
         username = request.form.get("username")
         password = request.form.get("password")
+
+        fullname = request.form.get("fullname")
+        position = request.form.get("position")
+
         role = request.form.get("role")
 
-        if role not in ["admin_jhs_shs", "admin_college", "assistant"]:
+        if role not in ["admin_jhs_shs", "admin_college"]:
             error = "Invalid role selected"
+
         else:
+
             try:
+
                 with engine.begin() as conn:
+
                     conn.exec_driver_sql(
                         """
-                        INSERT INTO users (username, password, role, status)
-                        VALUES (%s, %s, %s, 'pending')
+                        INSERT INTO users
+                        (
+                            username,
+                            password,
+                            fullname,
+                            position,
+                            role,
+                            status
+                        )
+
+                        VALUES
+                        (
+                            %s,
+                            %s,
+                            %s,
+                            %s,
+                            %s,
+                            'pending'
+                        )
                         """,
-                        (username, password, role)
+
+                        (
+                            username,
+                            password,
+                            fullname,
+                            position,
+                            role
+                        )
                     )
 
                 success = "Account registered. Please wait for Super Admin approval."
 
             except Exception as e:
+
                 print("REGISTER ERROR:", e)
+
                 error = "Username already exists"
 
     return render_template(
@@ -1151,8 +1204,8 @@ def export_pdf():
     Paragraph(
         "<b>Prepared By:</b><br/><br/><br/><br/>"
         "______________________________<br/>"
-        "Mathias Villacarlos Jr.<br/>"
-        "AADO Associate",
+        f"{session.get('fullname', '')}<br/>"
+        f"{session.get('position', '')}",
         styles["Normal"]
     ),
 
