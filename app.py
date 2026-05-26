@@ -1587,7 +1587,7 @@ def add_student():
 @app.route("/promote_students", methods=["GET", "POST"])
 def promote_students():
 
-    if session.get("role") != "admin":
+    if session.get("role") != "super_admin":
         return redirect("/student_list")
 
     if request.method == "POST":

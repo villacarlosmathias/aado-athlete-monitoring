@@ -15,20 +15,21 @@
 
     <div class="menu">
 
-    {% if session.get("role") == "admin" %}
+    {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
         <a href="/">🏠 Dashboard</a>
     {% endif %}
 
     <a href="/student_list">👥 Student List</a>
     <a href="/add_student">➕ Add New Student</a>
 
-    {% if session.get("role") == "admin" %}
+    {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
         <a href="/grades">📘 Grades</a>
         <a href="/reports">📊 Reports</a>
     {% endif %}
 
-    {% if session.get("role") == "admin" %}
+    {% if session.get("role") == "super_admin" %}
         <a href="/promote_students">⬆️ Promote Students</a>
+        <a href="/manage_accounts">👤 Manage Accounts</a>
     {% endif %}
 
     <a href="/logout">🚪 Logout</a>
@@ -40,7 +41,7 @@
 
     <div class="topbar">
         <h2>AADO Dashboard</h2>
-        <h3>Hi, Mathias Jr</h3>
+        <h3>Hi, {{ session.get("username", "User") }}</h3>
     </div>
 
     <div class="cards">

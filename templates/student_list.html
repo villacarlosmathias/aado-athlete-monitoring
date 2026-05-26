@@ -19,7 +19,7 @@
 
     <div class="menu">
 
-        {% if session.get("role") == "admin" %}
+        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
             <a href="/">🏠 Dashboard</a>
         {% endif %}
 
@@ -29,13 +29,14 @@
             ➕ Add New Student
         </a>
 
-        {% if session.get("role") == "admin" %}
+        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
             <a href="/grades">📘 Grades</a>
             <a href="/reports">📊 Reports</a>
         {% endif %}
 
-        {% if session.get("role") == "admin" %}
+        {% if session.get("role") == "super_admin" %}
             <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
         {% endif %}
 
         <a href="/logout">🚪 Logout</a>
@@ -216,7 +217,7 @@
                             </a>
 
 
-                            {% if session.get("role") == "admin" %}
+                            {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
 
                             <a class="table-btn edit-btn"
                                href="/edit_grades/{{ row['Student ID'] }}">
