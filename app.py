@@ -678,7 +678,14 @@ def grades():
 
     sports = sorted(df["Sports Events"].dropna().astype(str).unique())
     academic_years = sorted(df["Academic Year"].dropna().astype(str).unique())
-    terms = sorted(df["Term"].dropna().astype(str).unique())
+    term_values = df["Term"].dropna().astype(str).apply(normalize_term).unique()
+
+    term_order = ["1st", "2nd", "3rd", "4th"]
+
+    terms = [
+        term for term in term_order
+        if term in term_values
+    ]
     grade_levels = sorted(df["Grade Level"].dropna().astype(str).unique())
 
     return render_template(
@@ -1393,12 +1400,14 @@ def reports():
         .unique()
     )
 
-    terms = sorted(
-        df["Term"]
-        .dropna()
-        .astype(str)
-        .unique()
-    )
+    term_values = df["Term"].dropna().astype(str).apply(normalize_term).unique()
+
+    term_order = ["1st", "2nd", "3rd", "4th"]
+
+    terms = [
+        term for term in term_order
+        if term in term_values
+    ]
 
     grade_levels = sorted(
         df["Grade Level"]
