@@ -309,7 +309,7 @@ def register():
 
         role = request.form.get("role")
 
-        if role not in ["admin_jhs_shs", "admin_college"]:
+        if role not in ["super_admin", "admin_jhs_shs", "admin_college"]:
             error = "Invalid role selected"
 
         else:

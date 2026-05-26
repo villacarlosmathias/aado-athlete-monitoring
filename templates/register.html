@@ -1,39 +1,86 @@
-<form method="POST">
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
 
-    <input type="text"
-           name="fullname"
-           placeholder="Full Name"
-           required>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
 
-    <input type="text"
-           name="position"
-           placeholder="Position"
-           required>
+<body class="login-page">
 
-    <input type="text"
-           name="username"
-           placeholder="Username"
-           required>
+<div class="login-container">
 
-    <input type="password"
-           name="password"
-           placeholder="Password"
-           required>
+    <div class="login-card">
 
-    <select name="role" required>
-        <option value="">Select Role</option>
+        <h1>Create Admin Account</h1>
 
-        <option value="admin_jhs_shs">
-            JHS / SHS Admin
-        </option>
+        {% if error %}
+            <p class="login-error">{{ error }}</p>
+        {% endif %}
 
-        <option value="admin_college">
-            College Admin
-        </option>
-    </select>
+        {% if success %}
+            <p style="color:green; text-align:center;">
+                {{ success }}
+            </p>
+        {% endif %}
 
-    <button type="submit">
-        Register
-    </button>
+        <form method="POST">
 
-</form>
+            <input type="text"
+                   name="fullname"
+                   placeholder="Full Name"
+                   required>
+
+            <input type="text"
+                   name="position"
+                   placeholder="Position"
+                   required>
+
+            <input type="text"
+                   name="username"
+                   placeholder="Username"
+                   required>
+
+            <input type="password"
+                   name="password"
+                   placeholder="Password"
+                   required>
+
+            <select name="role" required>
+
+                <option value="">
+                    Select Role
+                </option>
+
+                <option value="super_admin">
+                    Super Admin
+                </option>
+
+                <option value="admin_jhs_shs">
+                    JHS / SHS Admin
+                </option>
+
+                <option value="admin_college">
+                    College Admin
+                </option>
+
+            </select>
+
+            <button type="submit">
+                Register
+            </button>
+
+        </form>
+
+        <p style="margin-top:20px;">
+            Already have account?
+            <a href="/login">Login here</a>
+        </p>
+
+    </div>
+
+</div>
+
+</body>
+</html>
