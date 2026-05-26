@@ -28,6 +28,30 @@ DATABASE_URL = os.environ.get(
 
 engine = create_engine(DATABASE_URL)
 
+def init_users_table():
+    with engine.begin() as conn:
+        conn.exec_driver_sql("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending'
+            )
+        """)
+
+        result = conn.exec_driver_sql(
+            "SELECT COUNT(*) FROM users WHERE role = 'super_admin'"
+        ).scalar()
+
+        if result == 0:
+            conn.exec_driver_sql("""
+                INSERT INTO users (username, password, role, status)
+                VALUES ('superadmin', 'superadmin123', 'super_admin', 'approved')
+            """)
+
+init_users_table()
+
 
 def load_data():
     try:
@@ -206,33 +230,115 @@ def login():
         username = request.form.get("username")
         password = request.form.get("password")
 
-        users = {
-            "admin": {
-                "password": "admin123",
-                "role": "admin"
-            },
+        with engine.begin() as conn:
+            user = conn.exec_driver_sql(
+                """
+                SELECT username, password, role, status
+                FROM users
+                WHERE username = %s
+                """,
+                (username,)
+            ).fetchone()
 
-            "assistant": {
-                "password": "assistant123",
-                "role": "assistant"
-            }
-        }
+        if user is None:
+            error = "Invalid username or password"
 
-        if username in users and password == users[username]["password"]:
+        elif password != user[1]:
+            error = "Invalid username or password"
 
+        elif user[3] != "approved":
+            error = "Your account is still pending approval"
+
+        else:
             session["logged_in"] = True
-            session["username"] = username
-            session["role"] = users[username]["role"]
-
-            if session["role"] == "assistant":
-                return redirect("/student_list")
+            session["username"] = user[0]
+            session["role"] = user[2]
 
             return redirect("/")
 
-        else:
-            error = "Invalid username or password"
-
     return render_template("login.html", error=error)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    error = ""
+    success = ""
+
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        role = request.form.get("role")
+
+        if role not in ["admin_jhs_shs", "admin_college", "assistant"]:
+            error = "Invalid role selected"
+
+        else:
+            try:
+                with engine.begin() as conn:
+                    conn.exec_driver_sql(
+                        """
+                        INSERT INTO users (username, password, role, status)
+                        VALUES (%s, %s, %s, 'pending')
+                        """,
+                        (username, password, role)
+                    )
+
+                success = "Account registered. Please wait for Super Admin approval."
+
+            except:
+                error = "Username already exists"
+
+    return render_template(
+        "register.html",
+        error=error,
+        success=success
+    )
+
+
+@app.route("/manage_accounts")
+def manage_accounts():
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    with engine.begin() as conn:
+        users = conn.exec_driver_sql("""
+            SELECT id, username, role, status
+            FROM users
+            ORDER BY id DESC
+        """).fetchall()
+
+    return render_template(
+        "manage_accounts.html",
+        users=users
+    )
+
+
+@app.route("/approve_account/<int:user_id>")
+def approve_account(user_id):
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "UPDATE users SET status = 'approved' WHERE id = %s",
+            (user_id,)
+        )
+
+    return redirect("/manage_accounts")
+
+
+@app.route("/reject_account/<int:user_id>")
+def reject_account(user_id):
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "UPDATE users SET status = 'rejected' WHERE id = %s",
+            (user_id,)
+        )
+
+    return redirect("/manage_accounts")
 
 
 @app.route("/logout")

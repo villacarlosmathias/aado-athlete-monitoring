@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Accounts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+        <a href="/">🏠 Dashboard</a>
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+        <a href="/grades">📘 Grades</a>
+        <a href="/reports">📊 Reports</a>
+        <a href="/promote_students">⬆️ Promote Students</a>
+        <a href="/manage_accounts">👤 Manage Accounts</a>
+        <a href="/logout">🚪 Logout</a>
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Manage Accounts</h2>
+        <h3>Hi, {{ session.get("username", "User") }}</h3>
+    </div>
+
+    <div class="card">
+        <h2>User Accounts</h2>
+
+        <table class="grades-table">
+            <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+
+            {% for user in users %}
+            <tr>
+                <td>{{ user[1] }}</td>
+                <td>{{ user[2] }}</td>
+                <td>{{ user[3] }}</td>
+                <td>
+                    {% if user[3] == "pending" %}
+                        <a class="table-btn add-btn" href="/approve_account/{{ user[0] }}">
+                            Approve
+                        </a>
+
+                        <a class="table-btn delete-btn" href="/reject_account/{{ user[0] }}">
+                            Reject
+                        </a>
+                    {% else %}
+                        No action
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>
