@@ -75,9 +75,14 @@ def init_users_table():
         except:
             pass
 
+        
         result = conn.exec_driver_sql(
-            "SELECT COUNT(*) FROM users WHERE role = 'super_admin'"
-        ).scalar()
+            "SELECT COUNT(*) FROM users WHERE role = %s",
+            ("super_admin",)
+        )
+
+        super_admin_count = result.fetchone()[0]
+        
 
         if result == 0:
             conn.exec_driver_sql("""
