@@ -27,12 +27,11 @@
             <a href="/reports">📊 Reports</a>
         {% endif %}
 
-        {% if session.get("role") == "super_admin" %}
+       {% if session.get("role") == "super_admin" %}
             <a href="/promote_students">⬆️ Promote Students</a>
             <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
         {% endif %}
-
-<a href="/logout">🚪 Logout</a>
 
         <a href="/logout">🚪 Logout</a>
 
@@ -123,19 +122,9 @@
 
                 <div class="form-group">
                     <label>Sports Events</label>
-                    <select name="sport" required>
-                        <option value="">Select Sport</option>
-                        <option value="Badminton">Badminton</option>
-                        <option value="Baseball - Boys">Baseball - Boys</option>
-                        <option value="Basketball - Boys">Basketball - Boys</option>
-                        <option value="Basketball - Girls">Basketball - Girls</option>
-                        <option value="Chess">Chess</option>
-                        <option value="Lawn Tennis">Lawn Tennis</option>
-                        <option value="PEP Squad">PEP Squad</option>
-                        <option value="Taekwando">Taekwando</option>
-                        <option value="Volleyball - Boys">Volleyball - Boys</option>
-                        <option value="Volleyball - Girls">Volleyball - Girls</option>
-                    </select>
+                    <select name="sport" id="sport" required>
+                    <option value="">Select Sport</option>
+                </select>
                 </div>
 
                 <div class="form-group">
@@ -161,6 +150,36 @@
 </div>
 
 <script>
+const basicEdSports = JSON.parse('{{ basic_ed_sports|tojson|safe }}');
+const collegeSports = JSON.parse('{{ college_sports|tojson|safe }}');
+
+function updateSportsDropdown() {
+    const gradeLevel = document.getElementById("grade_level").value;
+    const sportSelect = document.getElementById("sport");
+
+    let sportsList = [];
+
+    if (gradeLevel === "College") {
+        sportsList = collegeSports;
+    } else if (gradeLevel !== "") {
+        sportsList = basicEdSports;
+    }
+
+    sportSelect.innerHTML = "";
+
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "Select Sport";
+    sportSelect.appendChild(defaultOption);
+
+    sportsList.forEach(function(sport) {
+        const option = document.createElement("option");
+        option.value = sport;
+        option.textContent = sport;
+        sportSelect.appendChild(option);
+    });
+}
+
 function toggleCollegeFields() {
     const gradeLevel = document.getElementById("grade_level").value;
     const collegeFields = document.getElementById("collegeFields");
@@ -181,6 +200,8 @@ function toggleCollegeFields() {
             strandField.style.display = "none";
         }
     }
+
+    updateSportsDropdown();
 }
 
 window.onload = toggleCollegeFields;

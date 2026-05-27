@@ -93,6 +93,65 @@ def init_users_table():
             )
 
 
+def init_sports_table():
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql("""
+            CREATE TABLE IF NOT EXISTS sports (
+                id SERIAL PRIMARY KEY,
+                sport_name TEXT NOT NULL,
+                level_group TEXT NOT NULL
+            )
+        """)
+
+        count = conn.exec_driver_sql(
+            "SELECT COUNT(*) FROM sports"
+        ).scalar()
+
+        if count == 0:
+            default_sports = [
+                ("Badminton", "basic_ed"),
+                ("Baseball - Boys", "basic_ed"),
+                ("Basketball - Boys", "basic_ed"),
+                ("Basketball - Girls", "basic_ed"),
+                ("Chess", "basic_ed"),
+                ("Lawn Tennis", "basic_ed"),
+                ("PEP Squad", "basic_ed"),
+                ("Taekwando", "basic_ed"),
+                ("Volleyball - Boys", "basic_ed"),
+                ("Volleyball - Girls", "basic_ed"),
+
+                ("Basketball", "college"),
+                ("Volleyball", "college"),
+                ("Badminton", "college"),
+                ("Chess", "college"),
+                ("Taekwondo", "college")
+            ]
+
+            for sport_name, level_group in default_sports:
+                conn.exec_driver_sql(
+                    """
+                    INSERT INTO sports (sport_name, level_group)
+                    VALUES (%s, %s)
+                    """,
+                    (sport_name, level_group)
+                )
+
+
+def get_sports_by_group(level_group):
+    with engine.begin() as conn:
+        rows = conn.exec_driver_sql(
+            """
+            SELECT sport_name
+            FROM sports
+            WHERE level_group = %s
+            ORDER BY sport_name
+            """,
+            (level_group,)
+        ).fetchall()
+
+    return [row[0] for row in rows]
+
 def load_data():
     try:
         df = pd.read_sql_query(
@@ -1722,7 +1781,14 @@ def add_student():
 
         return redirect("/student_list")
 
-    return render_template("add_student.html")
+    basic_ed_sports = get_sports_by_group("basic_ed")
+    college_sports = get_sports_by_group("college")
+
+    return render_template(
+        "add_student.html",
+        basic_ed_sports=basic_ed_sports,
+        college_sports=college_sports
+    )
 
 @app.route("/promote_students", methods=["GET", "POST"])
 def promote_students():
@@ -1781,6 +1847,59 @@ def promote_students():
         return redirect("/student_list")
 
     return render_template("promote_students.html")
+
+@app.route("/manage_sports", methods=["GET", "POST"])
+def manage_sports():
+
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    with engine.begin() as conn:
+
+        if request.method == "POST":
+
+            sport_name = request.form["sport_name"]
+            level_group = request.form["level_group"]
+
+            conn.exec_driver_sql(
+                """
+                INSERT INTO sports (sport_name, level_group)
+                VALUES (%s, %s)
+                """,
+                (sport_name, level_group)
+            )
+
+            return redirect("/manage_sports")
+
+        sports = conn.exec_driver_sql(
+            """
+            SELECT id, sport_name, level_group
+            FROM sports
+            ORDER BY level_group, sport_name
+            """
+        ).fetchall()
+
+    return render_template(
+        "manage_sports.html",
+        sports=sports
+    )
+
+@app.route("/delete_sport/<int:sport_id>")
+def delete_sport(sport_id):
+
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "DELETE FROM sports WHERE id = %s",
+            (sport_id,)
+        )
+
+    return redirect("/manage_sports")
+
+init_users_table()
+init_sports_table()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5050, debug=True)
