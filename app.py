@@ -273,7 +273,7 @@ def login():
         with engine.begin() as conn:
             user = conn.exec_driver_sql(
                 """
-                SELECT username, password, role, status
+                SELECT username, password, role, status, fullname, position
                 FROM users
                 WHERE username = %s
                 """,
@@ -293,6 +293,8 @@ def login():
             session["logged_in"] = True
             session["username"] = user[0]
             session["role"] = user[2]
+            session["fullname"] = user[4]
+            session["position"] = user[5]
 
             return redirect("/")
 
