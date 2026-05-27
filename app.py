@@ -1474,23 +1474,23 @@ def intervention_report():
 
     signature_data = [[
 
-        Paragraph(
-            "<b>Prepared By:</b><br/><br/><br/><br/>"
-            "______________________________<br/>"
-            "Mathias Villacarlos Jr.<br/>"
-            "AADO Associate",
-            styles["Normal"]
-        ),
+    Paragraph(
+        "<b>Prepared By:</b><br/><br/><br/><br/>"
+        "______________________________<br/>"
+        f"{session.get('fullname', '')}<br/>"
+        f"{session.get('position', '')}",
+        styles["Normal"]
+    ),
 
-        Paragraph(
-            "<b>Reviewed By:</b><br/><br/><br/><br/>"
-            "______________________________<br/>"
-            "Ms. Maria Ester V. Suarez<br/>"
-            "Assistant Director, AADO",
-            styles["Normal"]
-        )
+    Paragraph(
+        "<b>Reviewed By:</b><br/><br/><br/><br/>"
+        "______________________________<br/>"
+        "Ms. Maria Ester V. Suarez<br/>"
+        "Assistant Director, AADO",
+        styles["Normal"]
+    )
 
-    ]]
+]]
 
     signature_table = Table(
         signature_data,
