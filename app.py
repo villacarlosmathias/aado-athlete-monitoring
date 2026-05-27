@@ -115,6 +115,27 @@ def load_data():
         print("LOAD DATA ERROR:", e)
         return pd.DataFrame()
 
+def filter_data_by_role(df):
+    role = session.get("role")
+
+    if df.empty:
+        return df
+
+    if role == "admin_college":
+        return df[
+            df["Grade Level"]
+            .astype(str)
+            .str.contains("College", case=False, na=False)
+        ]
+
+    if role == "admin_jhs_shs":
+        return df[
+            ~df["Grade Level"]
+            .astype(str)
+            .str.contains("College", case=False, na=False)
+        ]
+
+    return df
 
 def auto_backup_database():
     backup_folder = "backups"
@@ -449,26 +470,63 @@ def protect_pages():
 
 @app.route("/")
 def dashboard():
+
     df = load_data()
+    df = filter_data_by_role(df)
+
+    role = session.get("role")
 
     if df.empty:
         total_students = 0
         passed_students = 0
         failed_students = 0
         total_sports = 0
+
     else:
+
         total_students = df["Student ID"].astype(str).nunique()
 
         failed_ids = df[
-            pd.to_numeric(df["Final Term Grade"], errors="coerce") < 75
+            pd.to_numeric(
+                df["Final Term Grade"],
+                errors="coerce"
+            ) < 75
         ]["Student ID"].astype(str).unique()
 
         failed_students = len(failed_ids)
-        passed_students = total_students - failed_students
-        total_sports = df["Sports Events"].dropna().astype(str).nunique()
+
+        passed_students = (
+            total_students - failed_students
+        )
+
+        total_sports = (
+            df["Sports Events"]
+            .dropna()
+            .astype(str)
+            .nunique()
+        )
+
+    # =========================
+    # DASHBOARD TITLE
+    # =========================
+
+    if role == "super_admin":
+        dashboard_title = "Super Admin Dashboard"
+
+    elif role == "admin_jhs_shs":
+        dashboard_title = "JHS / SHS Dashboard"
+
+    elif role == "admin_college":
+        dashboard_title = "College Dashboard"
+
+    else:
+        dashboard_title = "AADO Dashboard"
 
     return render_template(
         "dashboard.html",
+
+        dashboard_title=dashboard_title,
+
         total_students=total_students,
         passed_students=passed_students,
         failed_students=failed_students,
@@ -479,6 +537,7 @@ def dashboard():
 @app.route("/student_list")
 def student_list():
     df = load_data()
+    df = filter_data_by_role(df)
 
     if df.empty:
         return render_template(
@@ -804,6 +863,7 @@ def edit_grades(student_id):
 @app.route("/grades")
 def grades():
     df = load_data()
+    df = filter_data_by_role(df)
 
     if df.empty:
         return render_template(
@@ -898,6 +958,7 @@ def delete_grade(row_index, student_id):
 @app.route("/export_pdf")
 def export_pdf():
     df = load_data()
+    df = filter_data_by_role(df)
 
     if df.empty:
         return "No data available"
@@ -1252,6 +1313,7 @@ def export_pdf():
 @app.route("/intervention_report")
 def intervention_report():
     df = load_data()
+    df = filter_data_by_role(df)
 
     report_type = request.args.get("type", "remedial")
 
@@ -1529,6 +1591,7 @@ def intervention_report():
 def reports():
 
     df = load_data()
+    df = filter_data_by_role(df)
 
     if df.empty:
         return render_template(
