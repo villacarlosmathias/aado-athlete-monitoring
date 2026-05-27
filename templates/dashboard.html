@@ -42,7 +42,7 @@
 
     <div class="topbar">
         <h2>{{ dashboard_title }}</h2>
-        <h3>Hi, Mathias Jr</h3>
+        <h3>Hi, {{ session.get("fullname", session.get("username")) }}</h3>
     </div>
 
     <div class="cards">
