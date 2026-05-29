@@ -466,3 +466,41 @@ td select {
     box-sizing: border-box;
     background: white;
 }
+
+.grades-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.grades-table th,
+.grades-table td {
+    vertical-align: middle;
+    text-align: center;
+    padding: 14px 10px;
+    box-sizing: border-box;
+}
+
+.grades-table th:first-child,
+.grades-table td:first-child {
+    width: 38%;
+    text-align: left;
+}
+
+.grades-table input[type="number"],
+.grades-table input[type="text"] {
+    width: 100%;
+    max-width: 170px;
+    height: 42px;
+    box-sizing: border-box;
+}
+
+.grades-table .table-btn,
+.grades-table button,
+.grades-table a.table-btn {
+    width: 130px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
