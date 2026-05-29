@@ -856,7 +856,12 @@ def edit_grades(student_id):
     student = student_records.iloc[0].to_dict()
     grade_level = str(student.get("Grade Level", ""))
 
-    student_level = "SHS" if is_shs(grade_level) else "JHS"
+    if is_college(grade_level):
+        student_level = "COLLEGE"
+    elif is_shs(grade_level):
+        student_level = "SHS"
+    else:
+        student_level = "JHS"
 
     if request.method == "POST":
         row_indexes = request.form.getlist("row_index[]")
@@ -864,30 +869,39 @@ def edit_grades(student_id):
         for row_index in row_indexes:
             idx = int(row_index)
 
-            if student_level == "SHS":
-                midterm = request.form.get(f"midterm_{idx}")
-                final = request.form.get(f"final_{idx}")
+            if student_level == "COLLEGE":
+                midterm = request.form.get(f"midterm_{idx}", "")
+                final = request.form.get(f"final_{idx}", "")
 
-                df.loc[idx, "Midterm"] = midterm
-                df.loc[idx, "Final"] = final
+                df.loc[idx, "Midterm"] = str(midterm)
+                df.loc[idx, "Final"] = str(final)
+                df.loc[idx, "Final Term Grade"] = str(final)
+                df.loc[idx, "Remarks"] = compute_college_remarks(final)
+
+            elif student_level == "SHS":
+                midterm = request.form.get(f"midterm_{idx}", "")
+                final = request.form.get(f"final_{idx}", "")
+
+                df.loc[idx, "Midterm"] = str(midterm)
+                df.loc[idx, "Final"] = str(final)
 
                 avg, remarks = compute_average([midterm, final])
-                df.loc[idx, "Final Term Grade"] = avg
+                df.loc[idx, "Final Term Grade"] = str(avg)
                 df.loc[idx, "Remarks"] = "" if remarks == "NO GRADE" else remarks
 
             else:
-                q1 = request.form.get(f"q1_{idx}")
-                q2 = request.form.get(f"q2_{idx}")
-                q3 = request.form.get(f"q3_{idx}")
-                q4 = request.form.get(f"q4_{idx}")
+                q1 = request.form.get(f"q1_{idx}", "")
+                q2 = request.form.get(f"q2_{idx}", "")
+                q3 = request.form.get(f"q3_{idx}", "")
+                q4 = request.form.get(f"q4_{idx}", "")
 
-                df.loc[idx, "Q1"] = q1
-                df.loc[idx, "Q2"] = q2
-                df.loc[idx, "Q3"] = q3
-                df.loc[idx, "Q4"] = q4
+                df.loc[idx, "Q1"] = str(q1)
+                df.loc[idx, "Q2"] = str(q2)
+                df.loc[idx, "Q3"] = str(q3)
+                df.loc[idx, "Q4"] = str(q4)
 
                 avg, remarks = compute_average([q1, q2, q3, q4])
-                df.loc[idx, "Final Term Grade"] = avg
+                df.loc[idx, "Final Term Grade"] = str(avg)
                 df.loc[idx, "Remarks"] = "" if remarks == "NO GRADE" else remarks
 
         save_data(df)
