@@ -848,7 +848,9 @@ def add_grade(student_id):
 def edit_grades(student_id):
     df = load_data()
 
-    student_records = df[df["Student ID"].astype(str) == str(student_id)]
+    student_records = df[
+        df["Student ID"].astype(str) == str(student_id)
+    ]
 
     if student_records.empty:
         return "No records found"
@@ -863,6 +865,21 @@ def edit_grades(student_id):
     else:
         student_level = "JHS"
 
+    def safe_grade(value):
+        try:
+            if value is None:
+                return None
+
+            value = str(value).strip()
+
+            if value == "":
+                return None
+
+            return float(value)
+
+        except:
+            return None
+
     if request.method == "POST":
         row_indexes = request.form.getlist("row_index[]")
 
@@ -873,21 +890,35 @@ def edit_grades(student_id):
                 midterm = request.form.get(f"midterm_{idx}", "")
                 final = request.form.get(f"final_{idx}", "")
 
-                df.loc[idx, "Midterm"] = str(midterm)
-                df.loc[idx, "Final"] = str(final)
-                df.loc[idx, "Final Term Grade"] = str(final)
+                midterm_value = safe_grade(midterm)
+                final_value = safe_grade(final)
+
+                df.loc[idx, "Midterm"] = midterm_value
+                df.loc[idx, "Final"] = final_value
+                df.loc[idx, "Final Term Grade"] = final_value
                 df.loc[idx, "Remarks"] = compute_college_remarks(final)
 
             elif student_level == "SHS":
                 midterm = request.form.get(f"midterm_{idx}", "")
                 final = request.form.get(f"final_{idx}", "")
 
-                df.loc[idx, "Midterm"] = str(midterm)
-                df.loc[idx, "Final"] = str(final)
+                midterm_value = safe_grade(midterm)
+                final_value = safe_grade(final)
 
-                avg, remarks = compute_average([midterm, final])
-                df.loc[idx, "Final Term Grade"] = str(avg)
-                df.loc[idx, "Remarks"] = "" if remarks == "NO GRADE" else remarks
+                df.loc[idx, "Midterm"] = midterm_value
+                df.loc[idx, "Final"] = final_value
+
+                avg, remarks = compute_average([
+                    midterm_value,
+                    final_value
+                ])
+
+                df.loc[idx, "Final Term Grade"] = safe_grade(avg)
+                df.loc[idx, "Remarks"] = (
+                    ""
+                    if remarks == "NO GRADE"
+                    else remarks
+                )
 
             else:
                 q1 = request.form.get(f"q1_{idx}", "")
@@ -895,14 +926,29 @@ def edit_grades(student_id):
                 q3 = request.form.get(f"q3_{idx}", "")
                 q4 = request.form.get(f"q4_{idx}", "")
 
-                df.loc[idx, "Q1"] = str(q1)
-                df.loc[idx, "Q2"] = str(q2)
-                df.loc[idx, "Q3"] = str(q3)
-                df.loc[idx, "Q4"] = str(q4)
+                q1_value = safe_grade(q1)
+                q2_value = safe_grade(q2)
+                q3_value = safe_grade(q3)
+                q4_value = safe_grade(q4)
 
-                avg, remarks = compute_average([q1, q2, q3, q4])
-                df.loc[idx, "Final Term Grade"] = str(avg)
-                df.loc[idx, "Remarks"] = "" if remarks == "NO GRADE" else remarks
+                df.loc[idx, "Q1"] = q1_value
+                df.loc[idx, "Q2"] = q2_value
+                df.loc[idx, "Q3"] = q3_value
+                df.loc[idx, "Q4"] = q4_value
+
+                avg, remarks = compute_average([
+                    q1_value,
+                    q2_value,
+                    q3_value,
+                    q4_value
+                ])
+
+                df.loc[idx, "Final Term Grade"] = safe_grade(avg)
+                df.loc[idx, "Remarks"] = (
+                    ""
+                    if remarks == "NO GRADE"
+                    else remarks
+                )
 
         save_data(df)
 
@@ -931,7 +977,6 @@ def edit_grades(student_id):
         student_level=student_level,
         show_value=show_value
     )
-
 
 @app.route("/grades")
 def grades():
