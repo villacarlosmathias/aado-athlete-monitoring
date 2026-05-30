@@ -571,3 +571,75 @@ td select {
     }
 
 }
+
+@media screen and (max-width: 900px) {
+
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+    }
+
+    .logo {
+        padding: 18px;
+    }
+
+    .logo h1 {
+        font-size: 24px;
+    }
+
+    .logo h2 {
+        font-size: 18px;
+    }
+
+    .menu {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+        margin-top: 0;
+    }
+
+    .menu a {
+        margin: 0;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .main {
+        margin-left: 0;
+        padding: 15px;
+    }
+
+    .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 18px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-grid,
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    th,
+    td {
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+}
