@@ -650,3 +650,10 @@ td select {
 .student-table td:nth-child(2){
     font-weight:600;
 }
+
+.student-count {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #1f3b93;
+}

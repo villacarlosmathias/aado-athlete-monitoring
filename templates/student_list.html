@@ -2,32 +2,24 @@
 <html>
 <head>
     <title>Student List</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-
     <div class="logo">
         <h1>NUNSIS</h1>
         <h2>Athletes' Academic Development Office</h2>
     </div>
 
     <div class="menu">
-
         {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
             <a href="/">🏠 Dashboard</a>
         {% endif %}
 
         <a href="/student_list">👥 Student List</a>
-
-        <a href="/add_student">
-            ➕ Add New Student
-        </a>
+        <a href="/add_student">➕ Add New Student</a>
 
         {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
             <a href="/grades">📘 Grades</a>
@@ -41,42 +33,24 @@
         {% endif %}
 
         <a href="/logout">🚪 Logout</a>
-
     </div>
-
 </div>
 
-
-<!-- MAIN -->
 <div class="main">
 
-    <!-- TOPBAR -->
     <div class="topbar">
-
         <h2>Student List</h2>
-
-        <h3>
-            Hi, {{ session.get("username", "User") }}
-        </h3>
-
+        <h3>Hi, {{ session.get("fullname", session.get("username", "User")) }}</h3>
     </div>
 
-
-    <!-- FILTER CARD -->
     <div class="card">
-
         <h2>Filter Students</h2>
 
         <form method="GET">
-
             <div class="filter-grid">
 
-                <!-- SPORT -->
                 <select name="sport">
-
-                    <option value="">
-                        All Sports
-                    </option>
+                    <option value="">All Sports</option>
 
                     {% for s in sports %}
                     <option value="{{ s }}"
@@ -87,16 +61,10 @@
                         {{ s }}
                     </option>
                     {% endfor %}
-
                 </select>
 
-
-                <!-- GRADE -->
                 <select name="grade_level">
-
-                    <option value="">
-                        All Grade Levels
-                    </option>
+                    <option value="">All Grade Levels</option>
 
                     {% for g in grade_levels %}
                     <option value="{{ g }}"
@@ -107,136 +75,86 @@
                         {{ g }}
                     </option>
                     {% endfor %}
-
                 </select>
 
-
-                <!-- SEARCH -->
                 <input type="text"
                        name="search"
                        placeholder="Search Student Name or ID"
                        value="{{ request.args.get('search', '') }}">
 
-
-                <!-- BUTTON -->
-                <button class="btn" type="submit">
-                    Filter
-                </button>
+                <button class="btn" type="submit">Filter</button>
 
             </div>
-
         </form>
-
     </div>
 
-
-    <!-- STUDENT TABLE -->
     <div class="card">
 
         <div class="table-header">
-
             <h2>Student Athletes</h2>
 
             <a href="/add_student" class="btn">
                 ➕ Add New Student
             </a>
-
         </div>
 
+        <p class="student-count">
+            Total Students: <strong>{{ students|length }}</strong>
+        </p>
 
-        <table class="grades-table">
+        <table class="student-table">
 
             <thead>
-
                 <tr>
-
-                    <th class="student-id-col">
-                        Student ID
-                    </th>
-
-                    <th class="name-col">
-                        Full Name
-                    </th>
-
-                    <th class="grade-col">
-                        Grade Level
-                    </th>
-
-                    <th class="sport-col">
-                        Sport
-                    </th>
-
-                    <th class="action-col">
-                        Actions
-                    </th>
-
+                    <th>#</th>
+                    <th>Student ID</th>
+                    <th>Full Name</th>
+                    <th>Grade Level</th>
+                    <th>Sport</th>
+                    <th>Actions</th>
                 </tr>
-
             </thead>
 
-
             <tbody>
-
                 {% for _, row in students.iterrows() %}
-
                 <tr>
+                    <td>{{ loop.index }}</td>
 
-                    <!-- STUDENT ID -->
                     <td class="student-id-col">
                         {{ row["Student ID"] }}
                     </td>
 
-
-                    <!-- NAME -->
                     <td class="name-col subject-text">
                         {{ row["Full Name"] }}
                     </td>
 
-
-                    <!-- GRADE -->
                     <td class="grade-col">
                         {{ row["Grade Level"] }}
                     </td>
 
-
-                    <!-- SPORT -->
                     <td class="sport-col">
                         {{ row["Sports Events"] }}
                     </td>
 
-
-                    <!-- ACTION -->
                     <td class="action-col">
-
                         <div class="action-buttons">
 
                             <a class="table-btn add-btn"
                                href="/add_grade/{{ row['Student ID'] }}">
-
                                 Add Subjects
-
                             </a>
-
 
                             {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
-
                             <a class="table-btn edit-btn"
                                href="/edit_grades/{{ row['Student ID'] }}">
-
                                 Edit
-
                             </a>
-
                             {% endif %}
 
                         </div>
-
                     </td>
-
                 </tr>
-
                 {% endfor %}
-
             </tbody>
 
         </table>
