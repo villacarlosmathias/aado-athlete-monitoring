@@ -531,3 +531,43 @@ td select {
     padding: 8px 12px;
     margin: 0;
 }
+
+@media print {
+
+    .no-print{
+        display:none;
+    }
+
+    body{
+        margin:0;
+        padding:5px;
+        font-size:9px;
+    }
+
+    table{
+        width:100%;
+    }
+
+    th{
+        font-size:8px;
+        padding:2px;
+    }
+
+    td{
+        font-size:8px;
+        padding:2px;
+    }
+
+    h1{
+        font-size:14px;
+    }
+
+    h2{
+        font-size:11px;
+    }
+
+    p{
+        font-size:9px;
+    }
+
+}

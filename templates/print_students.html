@@ -4,26 +4,46 @@
     <title>Student List Report</title>
 
     <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            padding: 25px;
-            color: #111;
+        @page {
+            size: landscape;
+            margin: 0.3in;
         }
 
-        h1, h2, p {
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 10px;
+            color: #111;
+            font-size: 11px;
+        }
+
+        h1 {
             text-align: center;
+            font-size: 18px;
+            margin: 0 0 5px 0;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 14px;
+            margin: 0 0 5px 0;
+        }
+
+        p {
+            text-align: center;
+            font-size: 11px;
+            margin: 4px 0;
         }
 
         .top-actions {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         button {
             background: #1f3b93;
             color: white;
             border: none;
-            padding: 12px 22px;
+            padding: 10px 18px;
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
@@ -32,29 +52,47 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 25px;
+            margin-top: 12px;
+            table-layout: fixed;
         }
 
         th {
             background: #1f3b93;
             color: white;
-            padding: 10px;
+            padding: 4px;
             border: 1px solid #000;
+            font-size: 10px;
         }
 
         td {
-            padding: 9px;
+            padding: 3px;
             border: 1px solid #000;
+            font-size: 10px;
+            word-wrap: break-word;
         }
 
-        td:nth-child(1),
-        td:nth-child(3),
-        td:nth-child(4) {
+        th:nth-child(1), td:nth-child(1) {
+            width: 18%;
+            text-align: center;
+        }
+
+        th:nth-child(2), td:nth-child(2) {
+            width: 42%;
+            text-align: left;
+        }
+
+        th:nth-child(3), td:nth-child(3) {
+            width: 18%;
+            text-align: center;
+        }
+
+        th:nth-child(4), td:nth-child(4) {
+            width: 22%;
             text-align: center;
         }
 
         .summary {
-            margin-top: 15px;
+            margin-top: 8px;
             text-align: left;
             font-weight: bold;
         }
@@ -65,7 +103,35 @@
             }
 
             body {
-                padding: 10px;
+                margin: 0;
+                padding: 0;
+                font-size: 9px;
+            }
+
+            h1 {
+                font-size: 14px;
+            }
+
+            h2 {
+                font-size: 11px;
+            }
+
+            p {
+                font-size: 9px;
+            }
+
+            th {
+                font-size: 8px;
+                padding: 2px;
+            }
+
+            td {
+                font-size: 8px;
+                padding: 2px;
+            }
+
+            table {
+                margin-top: 8px;
             }
         }
     </style>
