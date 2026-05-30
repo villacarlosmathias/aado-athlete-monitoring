@@ -435,7 +435,7 @@ td select {
 
 .action-buttons {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 8px;
     align-items: center;
     justify-content: center;
@@ -517,4 +517,17 @@ td select {
     min-width: 110px;
     height: 36px;
     padding: 8px 12px;
+}
+
+.student-table th:nth-child(5),
+.student-table td:nth-child(5) {
+    width: 200px;
+    min-width: 200px;
+}
+
+.student-table .table-btn {
+    width: 130px;
+    height: 36px;
+    padding: 8px 12px;
+    margin: 0;
 }
