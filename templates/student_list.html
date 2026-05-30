@@ -144,6 +144,11 @@
                                 Add Subjects
                             </a>
 
+                            <a class="table-btn edit-btn"
+                                href="/academic_monitoring_form/{{ row['Student ID'] }}">
+                                    Monitoring Form
+                            </a>
+
                             {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
                             <a class="table-btn edit-btn"
                                href="/edit_grades/{{ row['Student ID'] }}">

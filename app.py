@@ -341,6 +341,25 @@ def promote_grade_level(grade_level, year_level=""):
     return grade_promotion.get(grade_level, grade_level), year_level
 
 
+def get_student_level_code(grade_level):
+    grade_level = str(grade_level)
+
+    if "College" in grade_level:
+        return "COL"
+
+    if "11" in grade_level or "12" in grade_level:
+        return "SHS"
+
+    return "JHS"
+
+
+def generate_case_no(grade_level):
+    level_code = get_student_level_code(grade_level)
+    year = datetime.now().year
+    timestamp = datetime.now().strftime("%m%d%H%M%S")
+
+    return f"AADO-{level_code}-{year}-{timestamp}"
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = ""
@@ -1701,6 +1720,353 @@ def intervention_report():
 
     response.headers["Content-Disposition"] = (
         f"attachment; filename={filename}"
+    )
+
+    return response
+
+@app.route("/academic_monitoring_form/<student_id>")
+def academic_monitoring_form(student_id):
+
+    df = load_data()
+    df = filter_data_by_role(df)
+
+    student_records = df[
+        df["Student ID"].astype(str) == str(student_id)
+    ]
+
+    if student_records.empty:
+        return "Student not found"
+
+    student = student_records.iloc[0].to_dict()
+
+    grade_level = str(student.get("Grade Level", ""))
+
+    case_no = generate_case_no(grade_level)
+    current_date = datetime.now().strftime("%B %d, %Y")
+    current_time = datetime.now().strftime("%I:%M %p")
+
+    failed_records = []
+
+    for _, row in student_records.iterrows():
+
+        subject = get_subject(row)
+
+        if is_college(grade_level):
+
+            final_grade = row.get("Final")
+
+            try:
+                if float(final_grade) < 75:
+                    failed_records.append([
+                        current_date,
+                        current_time,
+                        subject,
+                        "",
+                        f"Failed Final - {number_or_blank(final_grade)}",
+                        "",
+                        "",
+                        "",
+                        ""
+                    ])
+            except:
+                pass
+
+        elif is_shs(grade_level):
+
+            midterm = row.get("Midterm")
+            final = row.get("Final")
+
+            try:
+                if float(midterm) < 75:
+                    failed_records.append([
+                        current_date,
+                        current_time,
+                        subject,
+                        "",
+                        f"Failed Midterm - {number_or_blank(midterm)}",
+                        "",
+                        "",
+                        "",
+                        ""
+                    ])
+            except:
+                pass
+
+            try:
+                if float(final) < 75:
+                    failed_records.append([
+                        current_date,
+                        current_time,
+                        subject,
+                        "",
+                        f"Failed Final - {number_or_blank(final)}",
+                        "",
+                        "",
+                        "",
+                        ""
+                    ])
+            except:
+                pass
+
+        else:
+
+            quarters = [
+                ("Q1", row.get("Q1")),
+                ("Q2", row.get("Q2")),
+                ("Q3", row.get("Q3")),
+                ("Q4", row.get("Q4")),
+            ]
+
+            for quarter_name, grade in quarters:
+                try:
+                    if float(grade) < 75:
+                        failed_records.append([
+                            current_date,
+                            current_time,
+                            subject,
+                            "",
+                            f"Failed {quarter_name} - {number_or_blank(grade)}",
+                            "",
+                            "",
+                            "",
+                            ""
+                        ])
+                except:
+                    pass
+
+    if not failed_records:
+        failed_records.append([
+            current_date,
+            current_time,
+            "No failed subject found",
+            "",
+            "For Monitoring",
+            "",
+            "",
+            "",
+            ""
+        ])
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(legal),
+        rightMargin=15,
+        leftMargin=15,
+        topMargin=15,
+        bottomMargin=15
+    )
+
+    styles = getSampleStyleSheet()
+
+    normal = ParagraphStyle(
+        "NormalSmall",
+        parent=styles["Normal"],
+        fontSize=7,
+        leading=9
+    )
+
+    title_style = ParagraphStyle(
+        "TitleStyle",
+        parent=styles["Heading1"],
+        alignment=TA_CENTER,
+        fontSize=14,
+        leading=16
+    )
+
+    elements = []
+
+    logo_path = "static/nu_logo.png"
+
+    if os.path.exists(logo_path):
+        elements.append(Image(logo_path, width=350, height=78))
+
+    elements.append(Spacer(1, 5))
+
+    elements.append(
+        Paragraph(
+            "ACADEMIC MONITORING AND ADVISING FORM",
+            title_style
+        )
+    )
+
+    elements.append(Spacer(1, 8))
+
+    info_data = [
+        [
+            Paragraph(f"<b>Case No.:</b> {case_no}", normal),
+            Paragraph(f"<b>Date Generated:</b> {current_date}", normal),
+            Paragraph(f"<b>Time Generated:</b> {current_time}", normal),
+        ],
+        [
+            Paragraph(f"<b>Student Name:</b> {show_value(student.get('Full Name'))}", normal),
+            Paragraph(f"<b>Student ID:</b> {show_value(student.get('Student ID'))}", normal),
+            Paragraph(f"<b>Sport:</b> {show_value(student.get('Sports Events'))}", normal),
+        ],
+        [
+            Paragraph(f"<b>Grade Level:</b> {show_value(student.get('Grade Level'))}", normal),
+            Paragraph(f"<b>Section/Strand:</b> {show_value(student.get('Section'))} {show_value(student.get('Strand'))}", normal),
+            Paragraph(f"<b>Academic Year:</b> {show_value(student.get('Academic Year'))}", normal),
+        ],
+    ]
+
+    info_table = Table(
+        info_data,
+        colWidths=[310, 300, 300]
+    )
+
+    info_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.whitesmoke),
+        ("PADDING", (0, 0), (-1, -1), 5),
+    ]))
+
+    elements.append(info_table)
+    elements.append(Spacer(1, 8))
+
+    concerns_data = [
+        [
+            Paragraph("<b>Advising Concerns Discussed:</b>", normal),
+            Paragraph("☑ Low Grades", normal),
+            Paragraph("☐ Attendance Issues", normal),
+            Paragraph("☐ Study Habits", normal),
+            Paragraph("☐ Time Management", normal),
+            Paragraph("☐ Personal Concerns", normal),
+        ]
+    ]
+
+    concerns_table = Table(
+        concerns_data,
+        colWidths=[220, 130, 150, 130, 150, 130]
+    )
+
+    concerns_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+        ("BACKGROUND", (0, 0), (0, 0), colors.lightgrey),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("PADDING", (0, 0), (-1, -1), 5),
+    ]))
+
+    elements.append(concerns_table)
+    elements.append(Spacer(1, 8))
+
+    monitoring_headers = [
+        "Date",
+        "Time",
+        "Subject",
+        "Faculty",
+        "Concern Identified",
+        "Action Taken",
+        "Student Response",
+        "Student Signature",
+        "Remarks"
+    ]
+
+    monitoring_data = [monitoring_headers] + failed_records
+
+    monitoring_table = Table(
+        monitoring_data,
+        repeatRows=1,
+        colWidths=[75, 60, 160, 95, 150, 120, 120, 120, 110]
+    )
+
+    monitoring_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 6),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ALIGN", (0, 0), (1, -1), "CENTER"),
+        ("PADDING", (0, 0), (-1, -1), 4),
+    ])
+
+    monitoring_table.setStyle(monitoring_style)
+
+    elements.append(
+        Paragraph("<b>ACADEMIC MONITORING RECORD</b>", normal)
+    )
+    elements.append(monitoring_table)
+
+    elements.append(Spacer(1, 10))
+
+    remarks_table = Table(
+        [
+            [
+                Paragraph("<b>Remarks:</b><br/><br/><br/>", normal),
+                Paragraph(
+                    "<b>Status:</b><br/>"
+                    "☐ In Progress &nbsp;&nbsp;&nbsp; "
+                    "☐ On Track &nbsp;&nbsp;&nbsp; "
+                    "☐ At Risk &nbsp;&nbsp;&nbsp; "
+                    "☐ Satisfactory Progress &nbsp;&nbsp;&nbsp; "
+                    "☐ Outstanding Performance",
+                    normal
+                )
+            ]
+        ],
+        colWidths=[455, 455]
+    )
+
+    remarks_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+
+    elements.append(remarks_table)
+    elements.append(Spacer(1, 12))
+
+    signature_data = [
+        [
+            Paragraph("Academic Adviser:<br/><br/>__________________________", normal),
+            Paragraph("Student:<br/><br/>__________________________", normal),
+            Paragraph("Head Coach / Asst. Coach:<br/><br/>__________________________", normal),
+            Paragraph("Parent / Guardian:<br/><br/>__________________________", normal),
+        ],
+        [
+            Paragraph(
+                f"Prepared By:<br/><br/>__________________________<br/>"
+                f"{session.get('fullname', '')}<br/>"
+                f"{session.get('position', '')}",
+                normal
+            ),
+            Paragraph(
+                "Reviewed and Approved By:<br/><br/>__________________________<br/>"
+                "Ms. Maria Ester V. Suarez<br/>"
+                "Assistant Director, AADO",
+                normal
+            ),
+            "",
+            ""
+        ]
+    ]
+
+    signature_table = Table(
+        signature_data,
+        colWidths=[227, 227, 227, 227]
+    )
+
+    signature_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+        ("SPAN", (1, 1), (2, 1)),
+        ("SPAN", (3, 1), (3, 1)),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+
+    elements.append(signature_table)
+
+    doc.build(elements)
+
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = make_response(pdf)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename=academic_monitoring_{student_id}.pdf"
     )
 
     return response
