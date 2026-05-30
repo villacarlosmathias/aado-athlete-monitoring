@@ -1719,7 +1719,11 @@ def reports():
             shs_sports=[],
             academic_years=[],
             terms=[],
-            grade_levels=[]
+            grade_levels=[],
+            total_students=0,
+            total_jhs=0,
+            total_shs=0,
+            total_college=0
         )
 
     sports = sorted(
@@ -1729,11 +1733,10 @@ def reports():
         .unique()
     )
 
-    # JHS SPORTS
     jhs_df = df[
-        ~df["Grade Level"]
+        df["Grade Level"]
         .astype(str)
-        .str.contains("11|12", na=False)
+        .str.contains("Grade 7|Grade 8|Grade 9|Grade 10", na=False)
     ]
 
     jhs_sports = sorted(
@@ -1743,11 +1746,10 @@ def reports():
         .unique()
     )
 
-    # SHS SPORTS
     shs_df = df[
         df["Grade Level"]
         .astype(str)
-        .str.contains("11|12", na=False)
+        .str.contains("Grade 11|Grade 12", na=False)
     ]
 
     shs_sports = sorted(
@@ -1764,7 +1766,13 @@ def reports():
         .unique()
     )
 
-    term_values = df["Term"].dropna().astype(str).apply(normalize_term).unique()
+    term_values = (
+        df["Term"]
+        .dropna()
+        .astype(str)
+        .apply(normalize_term)
+        .unique()
+    )
 
     term_order = ["1st", "2nd", "3rd", "4th"]
 
@@ -1780,6 +1788,36 @@ def reports():
         .unique()
     )
 
+    students_unique = df.drop_duplicates(
+        subset=["Student ID"]
+    )
+
+    total_students = len(students_unique)
+
+    total_jhs = len(
+        students_unique[
+            students_unique["Grade Level"]
+            .astype(str)
+            .str.contains("Grade 7|Grade 8|Grade 9|Grade 10", na=False)
+        ]
+    )
+
+    total_shs = len(
+        students_unique[
+            students_unique["Grade Level"]
+            .astype(str)
+            .str.contains("Grade 11|Grade 12", na=False)
+        ]
+    )
+
+    total_college = len(
+        students_unique[
+            students_unique["Grade Level"]
+            .astype(str)
+            .str.contains("College", case=False, na=False)
+        ]
+    )
+
     return render_template(
         "reports.html",
         sports=sports,
@@ -1787,7 +1825,11 @@ def reports():
         shs_sports=shs_sports,
         academic_years=academic_years,
         terms=terms,
-        grade_levels=grade_levels
+        grade_levels=grade_levels,
+        total_students=total_students,
+        total_jhs=total_jhs,
+        total_shs=total_shs,
+        total_college=total_college
     )
 
 @app.route("/add_student", methods=["GET", "POST"])
