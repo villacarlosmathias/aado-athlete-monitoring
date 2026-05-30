@@ -15,25 +15,25 @@
 
     <div class="menu">
 
-    {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
-        <a href="/">🏠 Dashboard</a>
-    {% endif %}
+        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
 
-    <a href="/student_list">👥 Student List</a>
-    <a href="/add_student">➕ Add New Student</a>
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
 
-    {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
-        <a href="/grades">📘 Grades</a>
-        <a href="/reports">📊 Reports</a>
-    {% endif %}
+        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
 
-   {% if session.get("role") == "super_admin" %}
-        <a href="/promote_students">⬆️ Promote Students</a>
-        <a href="/manage_accounts">👤 Manage Accounts</a>
-        <a href="/manage_sports">🏅 Manage Sports</a>
-    {% endif %}
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+        {% endif %}
 
-   <a href="/logout">🚪 Logout</a>
+        <a href="/logout">🚪 Logout</a>
 
     </div>
 </div>
@@ -42,7 +42,7 @@
 
     <div class="topbar">
         <h2>Reports</h2>
-        <h3>Hi, {{ session.get("username", "User") }}</h3>
+        <h3>Hi, {{ session.get("fullname", session.get("username", "User")) }}</h3>
     </div>
 
     <div class="card">
@@ -60,7 +60,7 @@
                 <select name="sport" class="sport-select">
                     <option value="">All Sports</option>
                     {% for sport in sports %}
-                        <option value="{{ sport }}" data-level="ALL">{{ sport }}</option>
+                        <option value="{{ sport }}">{{ sport }}</option>
                     {% endfor %}
                 </select>
 
@@ -85,7 +85,9 @@
                     {% endfor %}
                 </select>
 
-                <button class="btn" type="submit">Export PDF</button>
+                <button class="btn" type="submit">
+                    Export PDF
+                </button>
 
             </div>
         </form>
@@ -111,7 +113,7 @@
                 <select name="sport" class="sport-select">
                     <option value="">All Sports</option>
                     {% for sport in sports %}
-                        <option value="{{ sport }}" data-level="ALL">{{ sport }}</option>
+                        <option value="{{ sport }}">{{ sport }}</option>
                     {% endfor %}
                 </select>
 
@@ -136,7 +138,9 @@
                     {% endfor %}
                 </select>
 
-                <button class="btn" type="submit">Export Intervention Report</button>
+                <button class="btn" type="submit">
+                    Export Intervention Report
+                </button>
 
             </div>
         </form>
@@ -146,6 +150,34 @@
             <br><br>
             <b>Load Revision:</b> Final Grade 70 pababa
         </p>
+    </div>
+
+    <div class="card">
+        <h2>Print Student Lists</h2>
+
+        <form action="/print_students" method="GET">
+            <div class="filter-grid">
+
+                <select name="grade_level">
+                    <option value="">All Grade Levels</option>
+                    {% for grade in grade_levels %}
+                        <option value="{{ grade }}">{{ grade }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="sport">
+                    <option value="">All Sports</option>
+                    {% for sport in sports %}
+                        <option value="{{ sport }}">{{ sport }}</option>
+                    {% endfor %}
+                </select>
+
+                <button class="btn" type="submit">
+                    🖨 Print Student List
+                </button>
+
+            </div>
+        </form>
     </div>
 
 </div>
@@ -159,8 +191,11 @@ const shsSports = {{ shs_sports|tojson|safe }};
 function updateSportDropdown(levelSelect) {
 
     const form = levelSelect.closest("form");
-
     const sportSelect = form.querySelector(".sport-select");
+
+    if (!sportSelect) {
+        return;
+    }
 
     const selectedLevel = levelSelect.value;
 
@@ -177,33 +212,24 @@ function updateSportDropdown(levelSelect) {
     sportSelect.innerHTML = "";
 
     const allOption = document.createElement("option");
-
     allOption.value = "";
     allOption.textContent = "All Sports";
 
     sportSelect.appendChild(allOption);
 
     sportsList.forEach(function(sport) {
-
         const option = document.createElement("option");
-
         option.value = sport;
         option.textContent = sport;
-
         sportSelect.appendChild(option);
-
     });
 
 }
 
 document.querySelectorAll(".level-select").forEach(function(levelSelect) {
-
     levelSelect.addEventListener("change", function() {
-
         updateSportDropdown(levelSelect);
-
     });
-
 });
 
 </script>

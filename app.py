@@ -1960,5 +1960,44 @@ def delete_sport(sport_id):
 init_users_table()
 init_sports_table()
 
+@app.route("/print_students")
+def print_students():
+
+    df = load_data()
+    df = filter_data_by_role(df)
+
+    grade_level = request.args.get("grade_level", "")
+    sport = request.args.get("sport", "")
+
+    if grade_level:
+        df = df[
+            df["Grade Level"].astype(str) == grade_level
+        ]
+
+    if sport:
+        df = df[
+            df["Sports Events"].astype(str) == sport
+        ]
+
+    students = (
+        df[
+            [
+                "Student ID",
+                "Full Name",
+                "Grade Level",
+                "Sports Events"
+            ]
+        ]
+        .drop_duplicates()
+        .sort_values("Full Name")
+    )
+
+    return render_template(
+        "print_students.html",
+        students=students.to_dict("records"),
+        grade_level=grade_level,
+        sport=sport
+    )
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5050, debug=True)

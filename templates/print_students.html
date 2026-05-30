@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student List Report</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 25px;
+            color: #111;
+        }
+
+        h1, h2, p {
+            text-align: center;
+        }
+
+        .top-actions {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #1f3b93;
+            color: white;
+            border: none;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+        }
+
+        th {
+            background: #1f3b93;
+            color: white;
+            padding: 10px;
+            border: 1px solid #000;
+        }
+
+        td {
+            padding: 9px;
+            border: 1px solid #000;
+        }
+
+        td:nth-child(1),
+        td:nth-child(3),
+        td:nth-child(4) {
+            text-align: center;
+        }
+
+        .summary {
+            margin-top: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="no-print top-actions">
+    <button onclick="window.print()">
+        🖨 Print
+    </button>
+</div>
+
+<h1>AADO Student-Athlete List</h1>
+
+<h2>
+    {% if grade_level %}
+        {{ grade_level }}
+    {% else %}
+        All Grade Levels
+    {% endif %}
+</h2>
+
+<p>
+    {% if sport %}
+        Sport: {{ sport }}
+    {% else %}
+        Sport: All Sports
+    {% endif %}
+</p>
+
+<p class="summary">
+    Total Students: {{ students|length }}
+</p>
+
+<table>
+    <tr>
+        <th>Student ID</th>
+        <th>Full Name</th>
+        <th>Grade Level</th>
+        <th>Sport</th>
+    </tr>
+
+    {% for student in students %}
+    <tr>
+        <td>{{ student["Student ID"] }}</td>
+        <td>{{ student["Full Name"] }}</td>
+        <td>{{ student["Grade Level"] }}</td>
+        <td>{{ student["Sports Events"] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>
