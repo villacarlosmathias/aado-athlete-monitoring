@@ -257,24 +257,27 @@ td select {
 /* Student List Table */
 
 .student-table {
-    table-layout: auto;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .student-table th:nth-child(1),
 .student-table td:nth-child(1) {
-    width: 16%;
+    width: 12%;
     white-space: nowrap;
 }
 
 .student-table th:nth-child(2),
 .student-table td:nth-child(2) {
-    width: 30%;
+    width: 38%;
     text-align: left;
+    font-weight: 600;
 }
 
 .student-table th:nth-child(3),
 .student-table td:nth-child(3) {
-    width: 13%;
+    width: 12%;
 }
 
 .student-table th:nth-child(4),
@@ -284,7 +287,7 @@ td select {
 
 .student-table th:nth-child(5),
 .student-table td:nth-child(5) {
-    width: 23%;
+    width: 20%;
 }
 
 /* Grades Tables */
@@ -508,8 +511,8 @@ td select {
 
 .student-table th,
 .student-table td {
-    padding: 10px 12px;
-    height: auto;
+    padding: 12px;
+    height: 70px;
     vertical-align: middle;
 }
 
@@ -521,8 +524,8 @@ td select {
 
 .student-table th:nth-child(5),
 .student-table td:nth-child(5) {
-    width: 200px;
-    min-width: 200px;
+    width: 170px;
+    min-width: 170px;
 }
 
 .student-table .table-btn {
@@ -642,4 +645,8 @@ td select {
     .card {
         padding: 18px;
     }
+}
+
+.student-table td:nth-child(2){
+    font-weight:600;
 }
