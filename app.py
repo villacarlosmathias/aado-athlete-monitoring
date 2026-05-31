@@ -1148,47 +1148,37 @@ def export_pdf():
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(legal),
-        rightMargin=10,
-        leftMargin=10,
-        topMargin=15,
-        bottomMargin=15
+        rightMargin=8,
+        leftMargin=8,
+        topMargin=8,
+        bottomMargin=8
     )
 
     styles = getSampleStyleSheet()
 
-    title_style = ParagraphStyle(
-        "TitleStyle",
-        parent=styles["Title"],
-        fontSize=20,
-        leading=24,
-        alignment=TA_CENTER,
-        textColor=colors.black,
-        spaceAfter=4
-    )
-
     subtitle_style = ParagraphStyle(
         "SubtitleStyle",
         parent=styles["Heading2"],
-        fontSize=16,
-        leading=18,
+        fontSize=11,
+        leading=12,
         alignment=TA_CENTER,
         textColor=colors.black,
-        spaceAfter=10
+        spaceAfter=3
     )
 
     small_style = ParagraphStyle(
         "SmallStyle",
         parent=styles["Normal"],
-        fontSize=6.5,
-        leading=7.5,
+        fontSize=5.8,
+        leading=6.5,
         alignment=TA_CENTER
     )
 
     subject_style = ParagraphStyle(
         "SubjectStyle",
         parent=styles["Normal"],
-        fontSize=6.5,
-        leading=7.5,
+        fontSize=5.8,
+        leading=6.5,
         alignment=TA_LEFT
     )
 
@@ -1199,12 +1189,12 @@ def export_pdf():
     if os.path.exists(logo_path):
         logo = Image(
             logo_path,
-            width=420,
-            height=95
+            width=250,
+            height=55
         )
         elements.append(logo)
 
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 3))
 
     display_term = normalize_term(term) if term else "All Terms"
 
@@ -1222,7 +1212,7 @@ def export_pdf():
         )
     )
 
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 4))
 
     if pdf_columns == "SHS":
         headers = [
@@ -1238,7 +1228,7 @@ def export_pdf():
             "Final Term Grade",
             "Status"
         ]
-        col_widths = [95, 75, 45, 85, 60, 40, 310, 55, 55, 75, 65]
+        col_widths = [90, 70, 40, 75, 55, 35, 330, 45, 45, 65, 55]
 
     elif pdf_columns == "JHS":
         headers = [
@@ -1256,7 +1246,7 @@ def export_pdf():
             "Final Term Grade",
             "Status"
         ]
-        col_widths = [90, 70, 45, 80, 55, 40, 285, 40, 40, 40, 40, 75, 65]
+        col_widths = [85, 65, 40, 75, 50, 35, 310, 35, 35, 35, 35, 65, 55]
 
     else:
         headers = [
@@ -1276,7 +1266,7 @@ def export_pdf():
             "Final Term Grade",
             "Status"
         ]
-        col_widths = [80, 65, 40, 70, 50, 35, 230, 35, 35, 35, 35, 45, 45, 65, 60]
+        col_widths = [75, 60, 35, 65, 45, 32, 245, 30, 30, 30, 30, 40, 40, 60, 50]
 
     table_data = [headers]
 
@@ -1308,7 +1298,7 @@ def export_pdf():
         midterm = number_or_blank(row.get("Midterm"))
         final = number_or_blank(row.get("Final"))
 
-        if is_shs(grade_level_value):
+        if is_shs(grade_level_value) or is_college(grade_level_value):
             average, remarks = compute_average([midterm, final])
         else:
             average, remarks = compute_average([q1, q2, q3, q4])
@@ -1368,7 +1358,7 @@ def export_pdf():
         ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 5.8),
+        ("FONTSIZE", (0, 0), (-1, -1), 5.2),
 
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("ALIGN", (0, 1), (0, -1), "LEFT"),
@@ -1376,12 +1366,14 @@ def export_pdf():
         ("ALIGN", (6, 1), (6, -1), "LEFT"),
 
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.black),
 
-        ("TOPPADDING", (0, 0), (-1, 0), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
-        ("TOPPADDING", (0, 1), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 3),
+        ("TOPPADDING", (0, 0), (-1, 0), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
+        ("TOPPADDING", (0, 1), (-1, -1), 1.3),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 1.3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
     ])
 
     remarks_col = len(headers) - 1
@@ -1390,51 +1382,81 @@ def export_pdf():
         remark = str(table_data[row_index][remarks_col]).upper().strip()
 
         if remark in ["PASSED", "PASS"]:
-            table_style.add("TEXTCOLOR", (remarks_col, row_index), (remarks_col, row_index), colors.green)
-            table_style.add("FONTNAME", (remarks_col, row_index), (remarks_col, row_index), "Helvetica-Bold")
+            table_style.add(
+                "TEXTCOLOR",
+                (remarks_col, row_index),
+                (remarks_col, row_index),
+                colors.green
+            )
+            table_style.add(
+                "FONTNAME",
+                (remarks_col, row_index),
+                (remarks_col, row_index),
+                "Helvetica-Bold"
+            )
 
         elif remark == "FAILED":
-            table_style.add("TEXTCOLOR", (remarks_col, row_index), (remarks_col, row_index), colors.red)
-            table_style.add("FONTNAME", (remarks_col, row_index), (remarks_col, row_index), "Helvetica-Bold")
+            table_style.add(
+                "TEXTCOLOR",
+                (remarks_col, row_index),
+                (remarks_col, row_index),
+                colors.red
+            )
+            table_style.add(
+                "FONTNAME",
+                (remarks_col, row_index),
+                (remarks_col, row_index),
+                "Helvetica-Bold"
+            )
 
         elif remark == "NO GRADE":
-            table_style.add("TEXTCOLOR", (remarks_col, row_index), (remarks_col, row_index), colors.orange)
-            table_style.add("FONTNAME", (remarks_col, row_index), (remarks_col, row_index), "Helvetica-Bold")
+            table_style.add(
+                "TEXTCOLOR",
+                (remarks_col, row_index),
+                (remarks_col, row_index),
+                colors.orange
+            )
+            table_style.add(
+                "FONTNAME",
+                (remarks_col, row_index),
+                (remarks_col, row_index),
+                "Helvetica-Bold"
+            )
 
     table.setStyle(table_style)
 
     elements.append(table)
 
-    elements.append(Spacer(1, 40))
+    elements.append(Spacer(1, 20))
 
     signature_data = [[
-    Paragraph(
-        "<b>Prepared By:</b><br/><br/><br/><br/>"
-        "______________________________<br/>"
-        f"{session.get('fullname', '')}<br/>"
-        f"{session.get('position', '')}",
-        styles["Normal"]
-    ),
+        Paragraph(
+            "<b>Prepared By:</b><br/><br/>"
+            "______________________________<br/>"
+            f"{session.get('fullname', '')}<br/>"
+            f"{session.get('position', '')}",
+            small_style
+        ),
 
-    Paragraph(
-        "<b>Reviewed By:</b><br/><br/><br/><br/>"
-        "______________________________<br/>"
-        "Ms. Maria Ester V. Suarez<br/>"
-        "Assistant Director, AADO",
-        styles["Normal"]
-    )
-]]
+        Paragraph(
+            "<b>Reviewed By:</b><br/><br/>"
+            "______________________________<br/>"
+            "Ms. Maria Ester V. Suarez<br/>"
+            "Assistant Director, AADO",
+            small_style
+        )
+    ]]
 
     signature_table = Table(
-    signature_data,
-    colWidths=[420, 420]
-)
+        signature_data,
+        colWidths=[420, 420]
+    )
 
     signature_table.setStyle(TableStyle([
-    ("VALIGN", (0,0), (-1,-1), "TOP"),
-    ("ALIGN", (0,0), (0,0), "LEFT"),
-    ("ALIGN", (1,0), (1,0), "RIGHT"),
-]))
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ALIGN", (0, 0), (0, 0), "LEFT"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+    ]))
 
     elements.append(signature_table)
 
