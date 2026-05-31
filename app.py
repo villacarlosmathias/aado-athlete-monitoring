@@ -1837,7 +1837,6 @@ def academic_monitoring_form(student_id):
             periods_to_check = [period] if period else ["Midterm", "Final"]
 
             for p in periods_to_check:
-
                 grade = row.get(p)
 
                 try:
@@ -1859,7 +1858,6 @@ def academic_monitoring_form(student_id):
             periods_to_check = [period] if period else ["Q1", "Q2", "Q3", "Q4"]
 
             for p in periods_to_check:
-
                 grade = row.get(p)
 
                 try:
@@ -1938,6 +1936,32 @@ def academic_monitoring_form(student_id):
         fontSize=8,
         leading=10
     )
+
+    def checkbox_label(text, line=False):
+        label = text
+
+        if line:
+            label = text + " __________________"
+
+        box = Table([[""]], colWidths=[10], rowHeights=[10])
+        box.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.7, colors.black),
+        ]))
+
+        item = Table(
+            [[box, Paragraph(label, checkbox_style)]],
+            colWidths=[18, 210]
+        )
+
+        item.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+
+        return item
 
     elements = []
 
@@ -2059,16 +2083,16 @@ def academic_monitoring_form(student_id):
 
     concerns_data = [
         [
-            Paragraph("☐ &nbsp; Low Grades", checkbox_style),
-            Paragraph("☐ &nbsp; Attendance Issues", checkbox_style),
-            Paragraph("☐ &nbsp; Subject Enrollment", checkbox_style),
-            Paragraph("☐ &nbsp; Study Habits", checkbox_style),
+            checkbox_label("Low Grades"),
+            checkbox_label("Attendance Issues"),
+            checkbox_label("Subject Enrollment"),
+            checkbox_label("Study Habits"),
         ],
         [
-            Paragraph("☐ &nbsp; Time Management", checkbox_style),
-            Paragraph("☐ &nbsp; Personal Concerns", checkbox_style),
-            Paragraph("☐ &nbsp; Career Guidance", checkbox_style),
-            Paragraph("☐ &nbsp; Others __________________", checkbox_style),
+            checkbox_label("Time Management"),
+            checkbox_label("Personal Concerns"),
+            checkbox_label("Career Guidance"),
+            checkbox_label("Others", line=True),
         ],
     ]
 
@@ -2126,16 +2150,16 @@ def academic_monitoring_form(student_id):
 
     intervention_data = [
         [
-            Paragraph("☐ &nbsp; Academic Consultation", checkbox_style),
-            Paragraph("☐ &nbsp; Teacher Coordination", checkbox_style),
-            Paragraph("☐ &nbsp; Coach Coordination", checkbox_style),
-            Paragraph("☐ &nbsp; Parent / Guardian Conference", checkbox_style),
+            checkbox_label("Academic Consultation"),
+            checkbox_label("Teacher Coordination"),
+            checkbox_label("Coach Coordination"),
+            checkbox_label("Parent / Guardian Conference"),
         ],
         [
-            Paragraph("☐ &nbsp; Remedial Activity", checkbox_style),
-            Paragraph("☐ &nbsp; Tutorial Assistance", checkbox_style),
-            Paragraph("☐ &nbsp; Academic Monitoring", checkbox_style),
-            Paragraph("☐ &nbsp; Others __________________", checkbox_style),
+            checkbox_label("Remedial Activity"),
+            checkbox_label("Tutorial Assistance"),
+            checkbox_label("Academic Monitoring"),
+            checkbox_label("Others", line=True),
         ],
     ]
 
@@ -2155,6 +2179,26 @@ def academic_monitoring_form(student_id):
 
     elements.append(section_bar("REMARKS AND STATUS"))
 
+    status_table = Table(
+        [
+            [Paragraph("<b>Status:</b>", normal)],
+            [checkbox_label("In Progress")],
+            [checkbox_label("On Track")],
+            [checkbox_label("At Risk")],
+            [checkbox_label("Satisfactory Progress")],
+            [checkbox_label("Outstanding Performance")],
+        ],
+        colWidths=[300]
+    )
+
+    status_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 1),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+    ]))
+
     remarks_table = Table(
         [
             [
@@ -2164,15 +2208,7 @@ def academic_monitoring_form(student_id):
                     "_______________________________________________",
                     normal
                 ),
-                Paragraph(
-                    "<b>Status:</b><br/>"
-                    "☐ &nbsp; In Progress<br/>"
-                    "☐ &nbsp; On Track<br/>"
-                    "☐ &nbsp; At Risk<br/>"
-                    "☐ &nbsp; Satisfactory Progress<br/>"
-                    "☐ &nbsp; Outstanding Performance",
-                    checkbox_style
-                )
+                status_table
             ]
         ],
         colWidths=[580, 380]
