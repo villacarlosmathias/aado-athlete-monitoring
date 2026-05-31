@@ -1807,14 +1807,12 @@ def academic_monitoring_form(student_id):
                 return False
 
             return float(value) < 75
-
         except:
             return False
 
     failed_records = []
 
     for _, row in student_records.iterrows():
-
         subject = get_subject(row)
         row_academic_year = str(show_value(row.get("Academic Year")))
         row_term = normalize_term(row.get("Term", ""))
@@ -1826,19 +1824,13 @@ def academic_monitoring_form(student_id):
             continue
 
         if is_college(grade_level):
-
             periods_to_check = ["Final"] if not period else [period]
-
         elif is_shs(grade_level):
-
             periods_to_check = ["Midterm", "Final"] if not period else [period]
-
         else:
-
             periods_to_check = ["Q1", "Q2", "Q3", "Q4"] if not period else [period]
 
         for p in periods_to_check:
-
             grade = row.get(p)
 
             if grade_is_failed(grade):
@@ -1916,41 +1908,38 @@ def academic_monitoring_form(student_id):
     )
 
     def checkbox_label(text, line=False):
-
-
         label = text
 
         if line:
             label = text + " __________________"
 
-    checkbox = Drawing(12, 12)
-
-    checkbox.add(
-        Rect(
-            1,
-            1,
-            10,
-            10,
-            strokeColor=colors.black,
-            fillColor=None,
-            strokeWidth=0.8
+        checkbox = Drawing(12, 12)
+        checkbox.add(
+            Rect(
+                1,
+                1,
+                10,
+                10,
+                strokeColor=colors.black,
+                fillColor=None,
+                strokeWidth=0.8
+            )
         )
-    )
 
-    item = Table(
-        [[checkbox, Paragraph(label, checkbox_style)]],
-        colWidths=[18, 210]
-    )
+        item = Table(
+            [[checkbox, Paragraph(label, checkbox_style)]],
+            colWidths=[18, 210]
+        )
 
-    item.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
+        item.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
 
-    return item
+        return item
 
     def draw_header(canvas, doc):
         canvas.saveState()
@@ -1998,7 +1987,7 @@ def academic_monitoring_form(student_id):
             ("ALIGN", (1, 0), (1, 0), "CENTER"),
         ]))
 
-        w, h = header_table.wrap(doc.width, doc.topMargin)
+        header_table.wrap(doc.width, doc.topMargin)
         header_table.drawOn(canvas, doc.leftMargin, doc.pagesize[1] - 75)
 
         canvas.restoreState()
@@ -2049,11 +2038,7 @@ def academic_monitoring_form(student_id):
         ],
     ]
 
-    info_table = Table(
-        info_data,
-        colWidths=[120, 350, 135, 355]
-    )
-
+    info_table = Table(info_data, colWidths=[120, 350, 135, 355])
     info_table.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
@@ -2082,11 +2067,7 @@ def academic_monitoring_form(student_id):
         ],
     ]
 
-    concerns_table = Table(
-        concerns_data,
-        colWidths=[240, 240, 240, 240]
-    )
-
+    concerns_table = Table(concerns_data, colWidths=[240, 240, 240, 240])
     concerns_table.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("PADDING", (0, 0), (-1, -1), 7),
@@ -2147,11 +2128,7 @@ def academic_monitoring_form(student_id):
         ],
     ]
 
-    intervention_table = Table(
-        intervention_data,
-        colWidths=[240, 240, 240, 240]
-    )
-
+    intervention_table = Table(intervention_data, colWidths=[240, 240, 240, 240])
     intervention_table.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("PADDING", (0, 0), (-1, -1), 7),
@@ -2232,11 +2209,7 @@ def academic_monitoring_form(student_id):
         ]
     ]
 
-    signature_table = Table(
-        signature_data,
-        colWidths=[240, 240, 240, 240]
-    )
-
+    signature_table = Table(signature_data, colWidths=[240, 240, 240, 240])
     signature_table.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("SPAN", (1, 1), (3, 1)),
