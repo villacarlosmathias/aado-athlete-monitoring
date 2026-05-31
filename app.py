@@ -1786,20 +1786,6 @@ def academic_monitoring_form(student_id):
     student = student_records.iloc[0].to_dict()
     grade_level = str(student.get("Grade Level", ""))
 
-    academic_year = request.args.get("academic_year", "")
-    term = request.args.get("term", "")
-    period = request.args.get("period", "")
-
-    if academic_year:
-        student_records = student_records[
-            student_records["Academic Year"].astype(str) == academic_year
-        ]
-
-    if term:
-        student_records = student_records[
-            student_records["Term"].astype(str).apply(normalize_term) == normalize_term(term)
-        ]
-
     case_no = generate_case_no(grade_level)
     current_date = datetime.now().strftime("%B %d, %Y")
     current_time = datetime.now().strftime("%I:%M %p")
@@ -1809,76 +1795,93 @@ def academic_monitoring_form(student_id):
     for _, row in student_records.iterrows():
 
         subject = get_subject(row)
+        academic_year = str(show_value(row.get("Academic Year")))
+        term = normalize_term(row.get("Term", ""))
 
         if is_college(grade_level):
-
-            if period != "Final":
-                continue
 
             final_grade = row.get("Final")
 
             try:
                 if float(final_grade) < 75:
                     failed_records.append([
-                        subject,
+                        academic_year,
+                        term,
                         "Final",
+                        subject,
                         number_or_blank(final_grade),
-                        "Failed Grade"
+                        "",
+                        ""
                     ])
             except:
                 pass
 
         elif is_shs(grade_level):
 
-            if period == "Midterm":
-                grade = row.get("Midterm")
-
-                try:
-                    if float(grade) < 75:
-                        failed_records.append([
-                            subject,
-                            "Midterm",
-                            number_or_blank(grade),
-                            "Failed Grade"
-                        ])
-                except:
-                    pass
-
-            elif period == "Final":
-                grade = row.get("Final")
-
-                try:
-                    if float(grade) < 75:
-                        failed_records.append([
-                            subject,
-                            "Final",
-                            number_or_blank(grade),
-                            "Failed Grade"
-                        ])
-                except:
-                    pass
-
-        else:
-
-            grade = row.get(period)
+            midterm = row.get("Midterm")
+            final = row.get("Final")
 
             try:
-                if float(grade) < 75:
+                if float(midterm) < 75:
                     failed_records.append([
+                        academic_year,
+                        term,
+                        "Midterm",
                         subject,
-                        period,
-                        number_or_blank(grade),
-                        "Failed Grade"
+                        number_or_blank(midterm),
+                        "",
+                        ""
                     ])
             except:
                 pass
 
+            try:
+                if float(final) < 75:
+                    failed_records.append([
+                        academic_year,
+                        term,
+                        "Final",
+                        subject,
+                        number_or_blank(final),
+                        "",
+                        ""
+                    ])
+            except:
+                pass
+
+        else:
+
+            quarters = [
+                ("Q1", row.get("Q1")),
+                ("Q2", row.get("Q2")),
+                ("Q3", row.get("Q3")),
+                ("Q4", row.get("Q4")),
+            ]
+
+            for quarter_name, grade in quarters:
+                try:
+                    if float(grade) < 75:
+                        failed_records.append([
+                            academic_year,
+                            term,
+                            quarter_name,
+                            subject,
+                            number_or_blank(grade),
+                            "",
+                            ""
+                        ])
+                except:
+                    pass
+
     if not failed_records:
         failed_records.append([
-            "No failed subject found",
-            period if period else "-",
             "-",
-            "For Monitoring Only"
+            "-",
+            "-",
+            "No failed subjects found",
+            "-",
+            "",
+            ""
         ])
 
     buffer = BytesIO()
@@ -1932,9 +1935,9 @@ def academic_monitoring_form(student_id):
     if os.path.exists(logo_path):
         elements.append(
             Image(logo_path, width=250, height=55)
-    )
+        )
 
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 2))
 
     elements.append(
         Paragraph(
@@ -1997,13 +2000,13 @@ def academic_monitoring_form(student_id):
             Paragraph("<b>Sport</b>", normal),
             Paragraph(str(show_value(student.get("Sports Events"))), normal),
             Paragraph("<b>Academic Year</b>", normal),
-            Paragraph(str(academic_year), normal),
+            Paragraph(str(show_value(student.get("Academic Year"))), normal),
         ],
         [
-            Paragraph("<b>Monitoring Coverage</b>", normal),
-            Paragraph(f"{academic_year} | {normalize_term(term)} | {period}", normal),
             Paragraph("<b>Date / Time</b>", normal),
             Paragraph(f"{current_date} - {current_time}", normal),
+            Paragraph("<b>Monitoring Type</b>", normal),
+            Paragraph("Cumulative Academic Deficiency Record", normal),
         ],
     ]
 
@@ -2064,7 +2067,7 @@ def academic_monitoring_form(student_id):
     elements.append(Spacer(1, 8))
 
     monitoring_title = Table(
-        [[Paragraph("<b>FAILED SUBJECTS / MONITORING RECORD</b>", section_style)]],
+        [[Paragraph("<b>ACADEMIC DEFICIENCY / MONITORING RECORD</b>", section_style)]],
         colWidths=[900]
     )
 
@@ -2076,10 +2079,13 @@ def academic_monitoring_form(student_id):
     elements.append(monitoring_title)
 
     monitoring_headers = [
+        "Academic Year",
+        "Term",
+        "Period",
         "Subject",
-        "Grading Period",
         "Grade",
-        "Concern"
+        "Teacher Remarks",
+        "Teacher Signature"
     ]
 
     monitoring_data = [monitoring_headers] + failed_records
@@ -2087,17 +2093,18 @@ def academic_monitoring_form(student_id):
     monitoring_table = Table(
         monitoring_data,
         repeatRows=1,
-        colWidths=[420, 160, 100, 220]
+        colWidths=[85, 55, 70, 270, 50, 220, 150]
     )
 
     monitoring_style = TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (1, 1), (2, -1), "CENTER"),
-        ("PADDING", (0, 0), (-1, -1), 6),
+        ("ALIGN", (0, 1), (2, -1), "CENTER"),
+        ("ALIGN", (4, 1), (4, -1), "CENTER"),
+        ("PADDING", (0, 0), (-1, -1), 5),
     ])
 
     monitoring_table.setStyle(monitoring_style)
