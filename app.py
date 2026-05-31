@@ -1915,30 +1915,42 @@ def academic_monitoring_form(student_id):
     )
 
     def checkbox_label(text, line=False):
-        label = text
 
-        if line:
-            label = text + " __________________"
+    from reportlab.graphics.shapes import Drawing, Rect
 
-        box = Table([[""]], colWidths=[10], rowHeights=[10])
-        box.setStyle(TableStyle([
-            ("BOX", (0, 0), (-1, -1), 0.7, colors.black),
-        ]))
+    label = text
 
-        item = Table(
-            [[box, Paragraph(label, checkbox_style)]],
-            colWidths=[18, 210]
+    if line:
+        label = text + " __________________"
+
+    checkbox = Drawing(12, 12)
+
+    checkbox.add(
+        Rect(
+            1,
+            1,
+            10,
+            10,
+            strokeColor=colors.black,
+            fillColor=None,
+            strokeWidth=0.8
         )
+    )
 
-        item.setStyle(TableStyle([
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ]))
+    item = Table(
+        [[checkbox, Paragraph(label, checkbox_style)]],
+        colWidths=[18, 210]
+    )
 
-        return item
+    item.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+
+    return item
 
     def draw_header(canvas, doc):
         canvas.saveState()
