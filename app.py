@@ -1786,6 +1786,10 @@ def academic_monitoring_form(student_id):
     student = student_records.iloc[0].to_dict()
     grade_level = str(student.get("Grade Level", ""))
 
+    academic_year = request.args.get("academic_year", "")
+    term = request.args.get("term", "")
+    period = request.args.get("period", "")
+
     case_no = generate_case_no(grade_level)
     current_date = datetime.now().strftime("%B %d, %Y")
     current_time = datetime.now().strftime("%I:%M %p")
@@ -1795,21 +1799,30 @@ def academic_monitoring_form(student_id):
     for _, row in student_records.iterrows():
 
         subject = get_subject(row)
-        academic_year = str(show_value(row.get("Academic Year")))
-        term = normalize_term(row.get("Term", ""))
+        row_academic_year = str(show_value(row.get("Academic Year")))
+        row_term = normalize_term(row.get("Term", ""))
+
+        if academic_year and row_academic_year != academic_year:
+            continue
+
+        if term and row_term != normalize_term(term):
+            continue
 
         if is_college(grade_level):
 
-            final_grade = row.get("Final")
+            grade = row.get("Final")
+
+            if period and period != "Final":
+                continue
 
             try:
-                if float(final_grade) < 75:
+                if float(grade) < 75:
                     failed_records.append([
-                        academic_year,
-                        term,
+                        row_academic_year,
+                        row_term,
                         "Final",
                         subject,
-                        number_or_blank(final_grade),
+                        number_or_blank(grade),
                         "",
                         ""
                     ])
@@ -1818,53 +1831,50 @@ def academic_monitoring_form(student_id):
 
         elif is_shs(grade_level):
 
-            midterm = row.get("Midterm")
-            final = row.get("Final")
+            periods_to_check = []
 
-            try:
-                if float(midterm) < 75:
-                    failed_records.append([
-                        academic_year,
-                        term,
-                        "Midterm",
-                        subject,
-                        number_or_blank(midterm),
-                        "",
-                        ""
-                    ])
-            except:
-                pass
+            if period:
+                periods_to_check = [period]
+            else:
+                periods_to_check = ["Midterm", "Final"]
 
-            try:
-                if float(final) < 75:
-                    failed_records.append([
-                        academic_year,
-                        term,
-                        "Final",
-                        subject,
-                        number_or_blank(final),
-                        "",
-                        ""
-                    ])
-            except:
-                pass
+            for p in periods_to_check:
 
-        else:
+                grade = row.get(p)
 
-            quarters = [
-                ("Q1", row.get("Q1")),
-                ("Q2", row.get("Q2")),
-                ("Q3", row.get("Q3")),
-                ("Q4", row.get("Q4")),
-            ]
-
-            for quarter_name, grade in quarters:
                 try:
                     if float(grade) < 75:
                         failed_records.append([
-                            academic_year,
-                            term,
-                            quarter_name,
+                            row_academic_year,
+                            row_term,
+                            p,
+                            subject,
+                            number_or_blank(grade),
+                            "",
+                            ""
+                        ])
+                except:
+                    pass
+
+        else:
+
+            periods_to_check = []
+
+            if period:
+                periods_to_check = [period]
+            else:
+                periods_to_check = ["Q1", "Q2", "Q3", "Q4"]
+
+            for p in periods_to_check:
+
+                grade = row.get(p)
+
+                try:
+                    if float(grade) < 75:
+                        failed_records.append([
+                            row_academic_year,
+                            row_term,
+                            p,
                             subject,
                             number_or_blank(grade),
                             "",
@@ -1980,6 +1990,10 @@ def academic_monitoring_form(student_id):
 
     elements.append(info_title)
 
+    coverage_year = academic_year if academic_year else "All Academic Years"
+    coverage_term = normalize_term(term) if term else "All Terms"
+    coverage_period = period if period else "All Periods"
+
     info_data = [
         [
             Paragraph("<b>Student Name</b>", normal),
@@ -1999,14 +2013,17 @@ def academic_monitoring_form(student_id):
         [
             Paragraph("<b>Sport</b>", normal),
             Paragraph(str(show_value(student.get("Sports Events"))), normal),
-            Paragraph("<b>Academic Year</b>", normal),
-            Paragraph(str(show_value(student.get("Academic Year"))), normal),
+            Paragraph("<b>Monitoring Coverage</b>", normal),
+            Paragraph(
+                f"{coverage_year} | {coverage_term} | {coverage_period}",
+                normal
+            ),
         ],
         [
             Paragraph("<b>Date / Time</b>", normal),
             Paragraph(f"{current_date} - {current_time}", normal),
             Paragraph("<b>Monitoring Type</b>", normal),
-            Paragraph("Cumulative Academic Deficiency Record", normal),
+            Paragraph("Academic Deficiency Record", normal),
         ],
     ]
 
