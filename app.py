@@ -1850,7 +1850,8 @@ def academic_monitoring_form(student_id):
                     pass
 
             if grades:
-                average_grade = round(sum(grades) / len(grades), 2)
+                average_raw = sum(grades) / len(grades)
+                average_grade = int(average_raw + 0.5)
 
                 if average_grade < 75:
                     failed_records.append([
