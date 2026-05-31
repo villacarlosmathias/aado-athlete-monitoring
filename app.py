@@ -9,6 +9,7 @@ import shutil
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from io import BytesIO
+from reportlab.graphics.shapes import Drawing, Rect
 
 from reportlab.lib.pagesizes import legal, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -1916,12 +1917,11 @@ def academic_monitoring_form(student_id):
 
     def checkbox_label(text, line=False):
 
-    from reportlab.graphics.shapes import Drawing, Rect
 
-    label = text
+        label = text
 
-    if line:
-        label = text + " __________________"
+        if line:
+            label = text + " __________________"
 
     checkbox = Drawing(12, 12)
 
