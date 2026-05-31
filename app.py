@@ -1898,9 +1898,9 @@ def academic_monitoring_form(student_id):
         "TitleStyle",
         parent=styles["Heading1"],
         alignment=TA_CENTER,
-        fontSize=15,
-        leading=18,
-        spaceAfter=8
+        fontSize=12,
+        leading=14,
+        spaceAfter=4
     )
 
     section_style = ParagraphStyle(
@@ -1931,8 +1931,8 @@ def academic_monitoring_form(student_id):
 
     if os.path.exists(logo_path):
         elements.append(
-            Image(logo_path, width=360, height=80)
-        )
+            Image(logo_path, width=250, height=55)
+    )
 
     elements.append(Spacer(1, 6))
 
