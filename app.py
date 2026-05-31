@@ -1792,8 +1792,8 @@ def academic_monitoring_form(student_id):
     period = request.args.get("period", "")
 
     case_no = generate_case_no(grade_level)
-    ph_time = datetime.now(ZoneInfo("Asia/Manila"))
 
+    ph_time = datetime.now(ZoneInfo("Asia/Manila"))
     current_date = ph_time.strftime("%B %d, %Y")
     current_time = ph_time.strftime("%I:%M %p")
 
@@ -1813,10 +1813,10 @@ def academic_monitoring_form(student_id):
 
         if is_college(grade_level):
 
-            grade = row.get("Final")
-
             if period and period != "Final":
                 continue
+
+            grade = row.get("Final")
 
             try:
                 if float(grade) < 75:
@@ -1834,12 +1834,7 @@ def academic_monitoring_form(student_id):
 
         elif is_shs(grade_level):
 
-            periods_to_check = []
-
-            if period:
-                periods_to_check = [period]
-            else:
-                periods_to_check = ["Midterm", "Final"]
+            periods_to_check = [period] if period else ["Midterm", "Final"]
 
             for p in periods_to_check:
 
@@ -1861,12 +1856,7 @@ def academic_monitoring_form(student_id):
 
         else:
 
-            periods_to_check = []
-
-            if period:
-                periods_to_check = [period]
-            else:
-                periods_to_check = ["Q1", "Q2", "Q3", "Q4"]
+            periods_to_check = [period] if period else ["Q1", "Q2", "Q3", "Q4"]
 
             for p in periods_to_check:
 
@@ -1902,10 +1892,10 @@ def academic_monitoring_form(student_id):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(legal),
-        rightMargin=25,
-        leftMargin=25,
-        topMargin=20,
-        bottomMargin=20
+        rightMargin=12,
+        leftMargin=12,
+        topMargin=10,
+        bottomMargin=10
     )
 
     styles = getSampleStyleSheet()
@@ -1914,88 +1904,107 @@ def academic_monitoring_form(student_id):
         "TitleStyle",
         parent=styles["Heading1"],
         alignment=TA_CENTER,
-        fontSize=12,
-        leading=14,
-        spaceAfter=4
+        fontSize=16,
+        leading=18,
+        spaceAfter=3
     )
 
     section_style = ParagraphStyle(
         "SectionStyle",
         parent=styles["Normal"],
         fontSize=8,
-        leading=10,
+        leading=9,
+        alignment=TA_CENTER,
         textColor=colors.white
     )
 
     normal = ParagraphStyle(
         "NormalSmall",
         parent=styles["Normal"],
-        fontSize=8,
-        leading=10
+        fontSize=7.5,
+        leading=9
     )
 
     small = ParagraphStyle(
         "Small",
         parent=styles["Normal"],
-        fontSize=7,
-        leading=9
+        fontSize=6.8,
+        leading=8
+    )
+
+    checkbox_style = ParagraphStyle(
+        "CheckboxStyle",
+        parent=styles["Normal"],
+        fontSize=8,
+        leading=10
     )
 
     elements = []
 
     logo_path = "static/nu_logo.png"
 
+    header_left = ""
+
     if os.path.exists(logo_path):
-        elements.append(
-            Image(logo_path, width=250, height=55)
-        )
+        header_left = Image(logo_path, width=250, height=55)
 
-    elements.append(Spacer(1, 2))
-
-    elements.append(
-        Paragraph(
-            "ACADEMIC MONITORING AND ADVISING FORM",
-            title_style
-        )
-    )
-
-    header_data = [
+    header_info = Table(
         [
-            Paragraph(f"<b>Case No.:</b> {case_no}", normal),
-            Paragraph(f"<b>Date Generated:</b> {current_date}", normal),
-            Paragraph(f"<b>Time Generated:</b> {current_time}", normal),
-        ]
-    ]
-
-    header_table = Table(
-        header_data,
-        colWidths=[300, 300, 300]
+            [
+                Paragraph("<b>Case No.:</b><br/>" + case_no, normal),
+                Paragraph("<b>Date Generated:</b><br/>" + current_date, normal),
+                Paragraph("<b>Time Generated:</b><br/>" + current_time, normal),
+            ]
+        ],
+        colWidths=[210, 210, 210]
     )
 
-    header_table.setStyle(TableStyle([
+    header_info.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("BACKGROUND", (0, 0), (-1, -1), colors.whitesmoke),
-        ("PADDING", (0, 0), (-1, -1), 6),
-    ]))
-
-    elements.append(header_table)
-    elements.append(Spacer(1, 8))
-
-    info_title = Table(
-        [[Paragraph("<b>STUDENT INFORMATION</b>", section_style)]],
-        colWidths=[900]
-    )
-
-    info_title.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1f3b93")),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("PADDING", (0, 0), (-1, -1), 5),
     ]))
 
-    elements.append(info_title)
+    top_header = Table(
+        [
+            [
+                header_left,
+                Paragraph("ACADEMIC MONITORING AND ADVISING FORM", title_style),
+            ],
+            [
+                "",
+                header_info
+            ]
+        ],
+        colWidths=[310, 650]
+    )
+
+    top_header.setStyle(TableStyle([
+        ("SPAN", (0, 0), (0, 1)),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 0), (1, 0), "CENTER"),
+    ]))
+
+    elements.append(top_header)
+    elements.append(Spacer(1, 4))
+
+    def section_bar(title):
+        t = Table(
+            [[Paragraph(f"<b>{title}</b>", section_style)]],
+            colWidths=[960]
+        )
+        t.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#082b87")),
+            ("PADDING", (0, 0), (-1, -1), 4),
+        ]))
+        return t
 
     coverage_year = academic_year if academic_year else "All Academic Years"
     coverage_term = normalize_term(term) if term else "All Terms"
     coverage_period = period if period else "All Periods"
+
+    elements.append(section_bar("STUDENT INFORMATION"))
 
     info_data = [
         [
@@ -2032,71 +2041,52 @@ def academic_monitoring_form(student_id):
 
     info_table = Table(
         info_data,
-        colWidths=[130, 320, 130, 320]
+        colWidths=[120, 350, 135, 355]
     )
 
     info_table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
         ("BACKGROUND", (2, 0), (2, -1), colors.whitesmoke),
-        ("PADDING", (0, 0), (-1, -1), 6),
+        ("PADDING", (0, 0), (-1, -1), 5),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
 
     elements.append(info_table)
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 5))
 
-    concerns_title = Table(
-        [[Paragraph("<b>ADVISING CONCERNS DISCUSSED</b>", section_style)]],
-        colWidths=[900]
-    )
-
-    concerns_title.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1f3b93")),
-        ("PADDING", (0, 0), (-1, -1), 5),
-    ]))
-
-    elements.append(concerns_title)
+    elements.append(section_bar("ADVISING CONCERNS DISCUSSED"))
 
     concerns_data = [
         [
-            Paragraph("■ Low Grades", normal),
-            Paragraph("□ Attendance Issues", normal),
-            Paragraph("□ Subject Enrollment", normal),
-            Paragraph("□ Study Habits", normal),
+            Paragraph("☐ &nbsp; Low Grades", checkbox_style),
+            Paragraph("☐ &nbsp; Attendance Issues", checkbox_style),
+            Paragraph("☐ &nbsp; Subject Enrollment", checkbox_style),
+            Paragraph("☐ &nbsp; Study Habits", checkbox_style),
         ],
         [
-            Paragraph("□ Time Management", normal),
-            Paragraph("□ Personal Concerns", normal),
-            Paragraph("□ Career Guidance", normal),
-            Paragraph("□ Others", normal),
+            Paragraph("☐ &nbsp; Time Management", checkbox_style),
+            Paragraph("☐ &nbsp; Personal Concerns", checkbox_style),
+            Paragraph("☐ &nbsp; Career Guidance", checkbox_style),
+            Paragraph("☐ &nbsp; Others __________________", checkbox_style),
         ],
     ]
 
     concerns_table = Table(
         concerns_data,
-        colWidths=[225, 225, 225, 225]
+        colWidths=[240, 240, 240, 240]
     )
 
     concerns_table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("PADDING", (0, 0), (-1, -1), 6),
+        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
+        ("PADDING", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
 
     elements.append(concerns_table)
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 5))
 
-    monitoring_title = Table(
-        [[Paragraph("<b>ACADEMIC DEFICIENCY / MONITORING RECORD</b>", section_style)]],
-        colWidths=[900]
-    )
-
-    monitoring_title.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1f3b93")),
-        ("PADDING", (0, 0), (-1, -1), 5),
-    ]))
-
-    elements.append(monitoring_title)
+    elements.append(section_bar("ACADEMIC DEFICIENCY / MONITORING RECORD"))
 
     monitoring_headers = [
         "Academic Year",
@@ -2113,136 +2103,108 @@ def academic_monitoring_form(student_id):
     monitoring_table = Table(
         monitoring_data,
         repeatRows=1,
-        colWidths=[85, 55, 70, 270, 50, 220, 150]
+        colWidths=[85, 65, 65, 300, 50, 240, 155]
     )
 
     monitoring_style = TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN", (0, 1), (2, -1), "CENTER"),
         ("ALIGN", (4, 1), (4, -1), "CENTER"),
-        ("PADDING", (0, 0), (-1, -1), 5),
+        ("PADDING", (0, 0), (-1, -1), 4),
     ])
 
     monitoring_table.setStyle(monitoring_style)
+
     elements.append(monitoring_table)
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 5))
 
-    intervention_title = Table(
-        [[Paragraph("<b>INTERVENTION PLAN / ACTION TAKEN</b>", section_style)]],
-        colWidths=[900]
-    )
-
-    intervention_title.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1f3b93")),
-        ("PADDING", (0, 0), (-1, -1), 5),
-    ]))
-
-    elements.append(intervention_title)
+    elements.append(section_bar("INTERVENTION PLAN / ACTION TAKEN"))
 
     intervention_data = [
         [
-            Paragraph("□ Academic Consultation", normal),
-            Paragraph("□ Teacher Coordination", normal),
-            Paragraph("□ Coach Coordination", normal),
-            Paragraph("□ Parent / Guardian Conference", normal),
+            Paragraph("☐ &nbsp; Academic Consultation", checkbox_style),
+            Paragraph("☐ &nbsp; Teacher Coordination", checkbox_style),
+            Paragraph("☐ &nbsp; Coach Coordination", checkbox_style),
+            Paragraph("☐ &nbsp; Parent / Guardian Conference", checkbox_style),
         ],
         [
-            Paragraph("□ Remedial Activity", normal),
-            Paragraph("□ Tutorial Assistance", normal),
-            Paragraph("□ Academic Monitoring", normal),
-            Paragraph("□ Others", normal),
+            Paragraph("☐ &nbsp; Remedial Activity", checkbox_style),
+            Paragraph("☐ &nbsp; Tutorial Assistance", checkbox_style),
+            Paragraph("☐ &nbsp; Academic Monitoring", checkbox_style),
+            Paragraph("☐ &nbsp; Others __________________", checkbox_style),
         ],
     ]
 
     intervention_table = Table(
         intervention_data,
-        colWidths=[225, 225, 225, 225]
+        colWidths=[240, 240, 240, 240]
     )
 
     intervention_table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("PADDING", (0, 0), (-1, -1), 6),
+        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
+        ("PADDING", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
 
     elements.append(intervention_table)
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 5))
 
-    remarks_title = Table(
-        [[Paragraph("<b>REMARKS AND STATUS</b>", section_style)]],
-        colWidths=[900]
-    )
-
-    remarks_title.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1f3b93")),
-        ("PADDING", (0, 0), (-1, -1), 5),
-    ]))
-
-    elements.append(remarks_title)
+    elements.append(section_bar("REMARKS AND STATUS"))
 
     remarks_table = Table(
         [
             [
                 Paragraph(
                     "<b>Remarks:</b><br/><br/>"
-                    "______________________________________________________________<br/><br/>"
-                    "______________________________________________________________",
+                    "_______________________________________________<br/><br/>"
+                    "_______________________________________________",
                     normal
                 ),
                 Paragraph(
                     "<b>Status:</b><br/>"
-                    "□ In Progress<br/>"
-                    "□ On Track<br/>"
-                    "□ At Risk<br/>"
-                    "□ Satisfactory Progress<br/>"
-                    "□ Outstanding Performance",
-                    normal
+                    "☐ &nbsp; In Progress<br/>"
+                    "☐ &nbsp; On Track<br/>"
+                    "☐ &nbsp; At Risk<br/>"
+                    "☐ &nbsp; Satisfactory Progress<br/>"
+                    "☐ &nbsp; Outstanding Performance",
+                    checkbox_style
                 )
             ]
         ],
-        colWidths=[600, 300]
+        colWidths=[580, 380]
     )
 
     remarks_table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("PADDING", (0, 0), (-1, -1), 7),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
 
     elements.append(remarks_table)
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 5))
 
-    signature_title = Table(
-        [[Paragraph("<b>SIGNATORIES</b>", section_style)]],
-        colWidths=[900]
-    )
-
-    signature_title.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1f3b93")),
-        ("PADDING", (0, 0), (-1, -1), 5),
-    ]))
-
-    elements.append(signature_title)
+    elements.append(section_bar("SIGNATORIES"))
 
     signature_data = [
         [
-            Paragraph("Academic Adviser:<br/><br/>__________________________", normal),
-            Paragraph("Student:<br/><br/>__________________________", normal),
-            Paragraph("Head Coach / Asst. Coach:<br/><br/>__________________________", normal),
-            Paragraph("Parent / Guardian:<br/><br/>__________________________", normal),
+            Paragraph("Academic Adviser:<br/><br/>____________________________", normal),
+            Paragraph("Student:<br/><br/>____________________________", normal),
+            Paragraph("Head Coach / Asst. Coach:<br/><br/>____________________________", normal),
+            Paragraph("Parent / Guardian:<br/><br/>____________________________", normal),
         ],
         [
             Paragraph(
-                f"Prepared By:<br/><br/>__________________________<br/>"
+                f"<b>Prepared By:</b><br/><br/>____________________________<br/>"
                 f"{session.get('fullname', '')}<br/>"
                 f"{session.get('position', '')}",
                 small
             ),
             Paragraph(
-                "Reviewed and Approved By:<br/><br/>__________________________<br/>"
+                "<b>Reviewed and Approved By:</b><br/><br/>____________________________<br/>"
                 "Ms. Maria Ester V. Suarez<br/>"
                 "Assistant Director, AADO",
                 small
@@ -2254,11 +2216,11 @@ def academic_monitoring_form(student_id):
 
     signature_table = Table(
         signature_data,
-        colWidths=[225, 225, 225, 225]
+        colWidths=[240, 240, 240, 240]
     )
 
     signature_table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
         ("SPAN", (1, 1), (3, 1)),
         ("PADDING", (0, 0), (-1, -1), 7),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
