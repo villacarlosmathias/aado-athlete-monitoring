@@ -7,6 +7,7 @@ import sqlite3
 import os
 import shutil
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from io import BytesIO
 
 from reportlab.lib.pagesizes import legal, landscape
@@ -1791,8 +1792,10 @@ def academic_monitoring_form(student_id):
     period = request.args.get("period", "")
 
     case_no = generate_case_no(grade_level)
-    current_date = datetime.now().strftime("%B %d, %Y")
-    current_time = datetime.now().strftime("%I:%M %p")
+    ph_time = datetime.now(ZoneInfo("Asia/Manila"))
+
+    current_date = ph_time.strftime("%B %d, %Y")
+    current_time = ph_time.strftime("%I:%M %p")
 
     failed_records = []
 
