@@ -1777,9 +1777,7 @@ def academic_monitoring_form(student_id):
     df = load_data()
     df = filter_data_by_role(df)
 
-    student_records = df[
-        df["Student ID"].astype(str) == str(student_id)
-    ]
+    student_records = df[df["Student ID"].astype(str) == str(student_id)]
 
     if student_records.empty:
         return "Student not found"
@@ -1797,6 +1795,21 @@ def academic_monitoring_form(student_id):
     current_date = ph_time.strftime("%B %d, %Y")
     current_time = ph_time.strftime("%I:%M %p")
 
+    def grade_is_failed(value):
+        try:
+            if value is None:
+                return False
+
+            value = str(value).strip()
+
+            if value == "" or value.lower() == "nan":
+                return False
+
+            return float(value) < 75
+
+        except:
+            return False
+
     failed_records = []
 
     for _, row in student_records.iterrows():
@@ -1813,66 +1826,30 @@ def academic_monitoring_form(student_id):
 
         if is_college(grade_level):
 
-            if period and period != "Final":
-                continue
-
-            grade = row.get("Final")
-
-            try:
-                if float(grade) < 75:
-                    failed_records.append([
-                        row_academic_year,
-                        row_term,
-                        "Final",
-                        subject,
-                        number_or_blank(grade),
-                        "",
-                        ""
-                    ])
-            except:
-                pass
+            periods_to_check = ["Final"] if not period else [period]
 
         elif is_shs(grade_level):
 
-            periods_to_check = [period] if period else ["Midterm", "Final"]
-
-            for p in periods_to_check:
-                grade = row.get(p)
-
-                try:
-                    if float(grade) < 75:
-                        failed_records.append([
-                            row_academic_year,
-                            row_term,
-                            p,
-                            subject,
-                            number_or_blank(grade),
-                            "",
-                            ""
-                        ])
-                except:
-                    pass
+            periods_to_check = ["Midterm", "Final"] if not period else [period]
 
         else:
 
-            periods_to_check = [period] if period else ["Q1", "Q2", "Q3", "Q4"]
+            periods_to_check = ["Q1", "Q2", "Q3", "Q4"] if not period else [period]
 
-            for p in periods_to_check:
-                grade = row.get(p)
+        for p in periods_to_check:
 
-                try:
-                    if float(grade) < 75:
-                        failed_records.append([
-                            row_academic_year,
-                            row_term,
-                            p,
-                            subject,
-                            number_or_blank(grade),
-                            "",
-                            ""
-                        ])
-                except:
-                    pass
+            grade = row.get(p)
+
+            if grade_is_failed(grade):
+                failed_records.append([
+                    row_academic_year,
+                    row_term,
+                    p,
+                    subject,
+                    number_or_blank(grade),
+                    "",
+                    ""
+                ])
 
     if not failed_records:
         failed_records.append([
@@ -1892,29 +1869,11 @@ def academic_monitoring_form(student_id):
         pagesize=landscape(legal),
         rightMargin=12,
         leftMargin=12,
-        topMargin=10,
+        topMargin=85,
         bottomMargin=10
     )
 
     styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle(
-        "TitleStyle",
-        parent=styles["Heading1"],
-        alignment=TA_CENTER,
-        fontSize=16,
-        leading=18,
-        spaceAfter=3
-    )
-
-    section_style = ParagraphStyle(
-        "SectionStyle",
-        parent=styles["Normal"],
-        fontSize=8,
-        leading=9,
-        alignment=TA_CENTER,
-        textColor=colors.white
-    )
 
     normal = ParagraphStyle(
         "NormalSmall",
@@ -1928,6 +1887,24 @@ def academic_monitoring_form(student_id):
         parent=styles["Normal"],
         fontSize=6.8,
         leading=8
+    )
+
+    section_style = ParagraphStyle(
+        "SectionStyle",
+        parent=styles["Normal"],
+        fontSize=8,
+        leading=9,
+        alignment=TA_CENTER,
+        textColor=colors.white
+    )
+
+    title_style = ParagraphStyle(
+        "TitleStyle",
+        parent=styles["Heading1"],
+        alignment=TA_CENTER,
+        fontSize=16,
+        leading=18,
+        spaceAfter=3
     )
 
     checkbox_style = ParagraphStyle(
@@ -1963,55 +1940,56 @@ def academic_monitoring_form(student_id):
 
         return item
 
-    elements = []
+    def draw_header(canvas, doc):
+        canvas.saveState()
 
-    logo_path = "static/nu_logo.png"
+        logo_path = "static/nu_logo.png"
 
-    header_left = ""
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, width=250, height=55)
+        else:
+            logo = Paragraph("NATIONAL UNIVERSITY<br/>Athletes' Academic Development Office", normal)
 
-    if os.path.exists(logo_path):
-        header_left = Image(logo_path, width=250, height=55)
-
-    header_info = Table(
-        [
-            [
+        header_info = Table(
+            [[
                 Paragraph("<b>Case No.:</b><br/>" + case_no, normal),
                 Paragraph("<b>Date Generated:</b><br/>" + current_date, normal),
                 Paragraph("<b>Time Generated:</b><br/>" + current_time, normal),
-            ]
-        ],
-        colWidths=[210, 210, 210]
-    )
+            ]],
+            colWidths=[210, 210, 210]
+        )
 
-    header_info.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("PADDING", (0, 0), (-1, -1), 5),
-    ]))
+        header_info.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("PADDING", (0, 0), (-1, -1), 5),
+        ]))
 
-    top_header = Table(
-        [
+        header_table = Table(
             [
-                header_left,
-                Paragraph("ACADEMIC MONITORING AND ADVISING FORM", title_style),
+                [
+                    logo,
+                    Paragraph("ACADEMIC MONITORING AND ADVISING FORM", title_style),
+                ],
+                [
+                    "",
+                    header_info
+                ]
             ],
-            [
-                "",
-                header_info
-            ]
-        ],
-        colWidths=[310, 650]
-    )
+            colWidths=[310, 650]
+        )
 
-    top_header.setStyle(TableStyle([
-        ("SPAN", (0, 0), (0, 1)),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (1, 0), (1, 0), "CENTER"),
-    ]))
+        header_table.setStyle(TableStyle([
+            ("SPAN", (0, 0), (0, 1)),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (1, 0), (1, 0), "CENTER"),
+        ]))
 
-    elements.append(top_header)
-    elements.append(Spacer(1, 4))
+        w, h = header_table.wrap(doc.width, doc.topMargin)
+        header_table.drawOn(canvas, doc.leftMargin, doc.pagesize[1] - 75)
+
+        canvas.restoreState()
 
     def section_bar(title):
         t = Table(
@@ -2028,6 +2006,8 @@ def academic_monitoring_form(student_id):
     coverage_term = normalize_term(term) if term else "All Terms"
     coverage_period = period if period else "All Periods"
 
+    elements = []
+
     elements.append(section_bar("STUDENT INFORMATION"))
 
     info_data = [
@@ -2041,19 +2021,13 @@ def academic_monitoring_form(student_id):
             Paragraph("<b>Grade Level</b>", normal),
             Paragraph(str(show_value(student.get("Grade Level"))), normal),
             Paragraph("<b>Section / Strand</b>", normal),
-            Paragraph(
-                f"{show_value(student.get('Section'))} {show_value(student.get('Strand'))}",
-                normal
-            ),
+            Paragraph(f"{show_value(student.get('Section'))} {show_value(student.get('Strand'))}", normal),
         ],
         [
             Paragraph("<b>Sport</b>", normal),
             Paragraph(str(show_value(student.get("Sports Events"))), normal),
             Paragraph("<b>Monitoring Coverage</b>", normal),
-            Paragraph(
-                f"{coverage_year} | {coverage_term} | {coverage_period}",
-                normal
-            ),
+            Paragraph(f"{coverage_year} | {coverage_term} | {coverage_period}", normal),
         ],
         [
             Paragraph("<b>Date / Time</b>", normal),
@@ -2130,7 +2104,7 @@ def academic_monitoring_form(student_id):
         colWidths=[85, 65, 65, 300, 50, 240, 155]
     )
 
-    monitoring_style = TableStyle([
+    monitoring_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 7),
@@ -2139,9 +2113,7 @@ def academic_monitoring_form(student_id):
         ("ALIGN", (0, 1), (2, -1), "CENTER"),
         ("ALIGN", (4, 1), (4, -1), "CENTER"),
         ("PADDING", (0, 0), (-1, -1), 4),
-    ])
-
-    monitoring_table.setStyle(monitoring_style)
+    ]))
 
     elements.append(monitoring_table)
     elements.append(Spacer(1, 5))
@@ -2200,17 +2172,15 @@ def academic_monitoring_form(student_id):
     ]))
 
     remarks_table = Table(
-        [
-            [
-                Paragraph(
-                    "<b>Remarks:</b><br/><br/>"
-                    "_______________________________________________<br/><br/>"
-                    "_______________________________________________",
-                    normal
-                ),
-                status_table
-            ]
-        ],
+        [[
+            Paragraph(
+                "<b>Remarks:</b><br/><br/>"
+                "_______________________________________________<br/><br/>"
+                "_______________________________________________",
+                normal
+            ),
+            status_table
+        ]],
         colWidths=[580, 380]
     )
 
@@ -2264,7 +2234,11 @@ def academic_monitoring_form(student_id):
 
     elements.append(signature_table)
 
-    doc.build(elements)
+    doc.build(
+        elements,
+        onFirstPage=draw_header,
+        onLaterPages=draw_header
+    )
 
     pdf = buffer.getvalue()
     buffer.close()
