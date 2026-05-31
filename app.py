@@ -1758,11 +1758,13 @@ def monitoring_form_filter(student_id):
     )
 
     if is_college(grade_level):
-        periods = ["Final"]
+        periods = ["Average", "Final"]
+
     elif is_shs(grade_level):
-        periods = ["Midterm", "Final"]
+        periods = ["Average", "Midterm", "Final"]
+
     else:
-        periods = ["Q1", "Q2", "Q3", "Q4"]
+        periods = ["Average", "Q1", "Q2", "Q3", "Q4"]
 
     return render_template(
         "monitoring_form_filter.html",
@@ -1830,19 +1832,74 @@ def academic_monitoring_form(student_id):
         else:
             periods_to_check = ["Q1", "Q2", "Q3", "Q4"] if not period else [period]
 
-        for p in periods_to_check:
-            grade = row.get(p)
+    if period == "Average":
 
-            if grade_is_failed(grade):
-                failed_records.append([
-                    row_academic_year,
-                    row_term,
-                    p,
-                    subject,
-                    number_or_blank(grade),
-                    "",
-                    ""
-                ])
+        if is_shs(grade_level):
+
+            values = [
+                row.get("Midterm"),
+                row.get("Final")
+            ]
+
+    elif is_college(grade_level):
+
+        values = [
+            row.get("Final")
+        ]
+
+    else:
+
+        values = [
+            row.get("Q1"),
+            row.get("Q2"),
+            row.get("Q3"),
+            row.get("Q4")
+        ]
+
+    grades = []
+
+    for value in values:
+        try:
+            value = str(value).strip()
+
+            if value and value.lower() != "nan":
+                grades.append(float(value))
+        except:
+            pass
+
+    if grades:
+
+        average_grade = round(sum(grades) / len(grades), 2)
+
+        if average_grade < 75:
+
+            failed_records.append([
+                row_academic_year,
+                row_term,
+                "Average",
+                subject,
+                average_grade,
+                "",
+                ""
+            ])
+
+    else:
+
+        for p in periods_to_check:
+
+          grade = row.get(p)
+
+        if grade_is_failed(grade):
+
+            failed_records.append([
+                row_academic_year,
+                row_term,
+                p,
+                subject,
+                number_or_blank(grade),
+                "",
+                ""
+            ])
 
     if not failed_records:
         failed_records.append([
