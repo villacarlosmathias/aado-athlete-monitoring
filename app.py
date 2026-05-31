@@ -1724,6 +1724,52 @@ def intervention_report():
 
     return response
 
+@app.route("/monitoring_form_filter/<student_id>")
+def monitoring_form_filter(student_id):
+
+    df = load_data()
+    df = filter_data_by_role(df)
+
+    student_records = df[
+        df["Student ID"].astype(str) == str(student_id)
+    ]
+
+    if student_records.empty:
+        return "Student not found"
+
+    student = student_records.iloc[0].to_dict()
+    grade_level = str(student.get("Grade Level", ""))
+
+    academic_years = sorted(
+        student_records["Academic Year"]
+        .dropna()
+        .astype(str)
+        .unique()
+    )
+
+    terms = sorted(
+        student_records["Term"]
+        .dropna()
+        .astype(str)
+        .apply(normalize_term)
+        .unique()
+    )
+
+    if is_college(grade_level):
+        periods = ["Final"]
+    elif is_shs(grade_level):
+        periods = ["Midterm", "Final"]
+    else:
+        periods = ["Q1", "Q2", "Q3", "Q4"]
+
+    return render_template(
+        "monitoring_form_filter.html",
+        student=student,
+        academic_years=academic_years,
+        terms=terms,
+        periods=periods
+    )
+
 @app.route("/academic_monitoring_form/<student_id>")
 def academic_monitoring_form(student_id):
 
@@ -1740,6 +1786,20 @@ def academic_monitoring_form(student_id):
     student = student_records.iloc[0].to_dict()
     grade_level = str(student.get("Grade Level", ""))
 
+    academic_year = request.args.get("academic_year", "")
+    term = request.args.get("term", "")
+    period = request.args.get("period", "")
+
+    if academic_year:
+        student_records = student_records[
+            student_records["Academic Year"].astype(str) == academic_year
+        ]
+
+    if term:
+        student_records = student_records[
+            student_records["Term"].astype(str).apply(normalize_term) == normalize_term(term)
+        ]
+
     case_no = generate_case_no(grade_level)
     current_date = datetime.now().strftime("%B %d, %Y")
     current_time = datetime.now().strftime("%I:%M %p")
@@ -1751,6 +1811,9 @@ def academic_monitoring_form(student_id):
         subject = get_subject(row)
 
         if is_college(grade_level):
+
+            if period != "Final":
+                continue
 
             final_grade = row.get("Final")
 
@@ -1767,56 +1830,53 @@ def academic_monitoring_form(student_id):
 
         elif is_shs(grade_level):
 
-            midterm = row.get("Midterm")
-            final = row.get("Final")
+            if period == "Midterm":
+                grade = row.get("Midterm")
 
-            try:
-                if float(midterm) < 75:
-                    failed_records.append([
-                        subject,
-                        "Midterm",
-                        number_or_blank(midterm),
-                        "Failed Grade"
-                    ])
-            except:
-                pass
-
-            try:
-                if float(final) < 75:
-                    failed_records.append([
-                        subject,
-                        "Final",
-                        number_or_blank(final),
-                        "Failed Grade"
-                    ])
-            except:
-                pass
-
-        else:
-
-            quarters = [
-                ("Q1", row.get("Q1")),
-                ("Q2", row.get("Q2")),
-                ("Q3", row.get("Q3")),
-                ("Q4", row.get("Q4")),
-            ]
-
-            for quarter_name, grade in quarters:
                 try:
                     if float(grade) < 75:
                         failed_records.append([
                             subject,
-                            quarter_name,
+                            "Midterm",
                             number_or_blank(grade),
                             "Failed Grade"
                         ])
                 except:
                     pass
 
+            elif period == "Final":
+                grade = row.get("Final")
+
+                try:
+                    if float(grade) < 75:
+                        failed_records.append([
+                            subject,
+                            "Final",
+                            number_or_blank(grade),
+                            "Failed Grade"
+                        ])
+                except:
+                    pass
+
+        else:
+
+            grade = row.get(period)
+
+            try:
+                if float(grade) < 75:
+                    failed_records.append([
+                        subject,
+                        period,
+                        number_or_blank(grade),
+                        "Failed Grade"
+                    ])
+            except:
+                pass
+
     if not failed_records:
         failed_records.append([
             "No failed subject found",
-            "-",
+            period if period else "-",
             "-",
             "For Monitoring Only"
         ])
@@ -1937,7 +1997,13 @@ def academic_monitoring_form(student_id):
             Paragraph("<b>Sport</b>", normal),
             Paragraph(str(show_value(student.get("Sports Events"))), normal),
             Paragraph("<b>Academic Year</b>", normal),
-            Paragraph(str(show_value(student.get("Academic Year"))), normal),
+            Paragraph(str(academic_year), normal),
+        ],
+        [
+            Paragraph("<b>Monitoring Coverage</b>", normal),
+            Paragraph(f"{academic_year} | {normalize_term(term)} | {period}", normal),
+            Paragraph("<b>Date / Time</b>", normal),
+            Paragraph(f"{current_date} - {current_time}", normal),
         ],
     ]
 

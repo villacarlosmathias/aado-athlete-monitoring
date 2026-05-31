@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Monitoring Form</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+        <a href="/">🏠 Dashboard</a>
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+        <a href="/grades">📘 Grades</a>
+        <a href="/reports">📊 Reports</a>
+        <a href="/logout">🚪 Logout</a>
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Generate Academic Monitoring Form</h2>
+        <h3>Hi, {{ session.get("fullname", session.get("username", "User")) }}</h3>
+    </div>
+
+    <div class="card">
+
+        <h2>Student Information</h2>
+
+        <p><b>Name:</b> {{ student["Full Name"] }}</p>
+        <p><b>Student ID:</b> {{ student["Student ID"] }}</p>
+        <p><b>Grade Level:</b> {{ student["Grade Level"] }}</p>
+        <p><b>Sport:</b> {{ student["Sports Events"] }}</p>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Select Monitoring Coverage</h2>
+
+        <form method="GET" action="/academic_monitoring_form/{{ student['Student ID'] }}">
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label>Academic Year</label>
+                    <select name="academic_year" required>
+                        <option value="">Select Academic Year</option>
+                        {% for ay in academic_years %}
+                            <option value="{{ ay }}">{{ ay }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Term</label>
+                    <select name="term" required>
+                        <option value="">Select Term</option>
+                        {% for term in terms %}
+                            <option value="{{ term }}">{{ term }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Grading Period</label>
+                    <select name="period" required>
+                        <option value="">Select Period</option>
+                        {% for period in periods %}
+                            <option value="{{ period }}">{{ period }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <button class="btn" type="submit">
+                    Generate PDF
+                </button>
+
+                <a href="/student_list" class="btn">
+                    Back
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+</html>
