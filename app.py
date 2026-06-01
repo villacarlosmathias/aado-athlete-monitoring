@@ -652,12 +652,12 @@ def student_dashboard():
         return render_template(
             "student_dashboard.html",
             student=None,
-            grades=[]
+            grouped_grades={}
         )
 
     student = student_records.iloc[0].to_dict()
 
-    grades = []
+    grouped_grades = {}
 
     for _, row in student_records.iterrows():
 
@@ -666,9 +666,15 @@ def student_dashboard():
         if subject.strip() == "":
             continue
 
-        grades.append({
-            "academic_year": show_value(row.get("Academic Year")),
-            "term": normalize_term(row.get("Term")),
+        academic_year = str(show_value(row.get("Academic Year")))
+        term = normalize_term(row.get("Term"))
+
+        group_title = f"AY {academic_year} - {term}"
+
+        if group_title not in grouped_grades:
+            grouped_grades[group_title] = []
+
+        grouped_grades[group_title].append({
             "subject": subject,
             "midterm": number_or_blank(row.get("Midterm")),
             "final": number_or_blank(row.get("Final")),
@@ -683,7 +689,7 @@ def student_dashboard():
     return render_template(
         "student_dashboard.html",
         student=student,
-        grades=grades
+        grouped_grades=grouped_grades
     )
 
 @app.route("/edit_student_own_profile", methods=["GET", "POST"])

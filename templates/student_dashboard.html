@@ -37,17 +37,14 @@
                 <th>Student ID</th>
                 <td>{{ student["Student ID"] }}</td>
             </tr>
-
             <tr>
                 <th>Full Name</th>
                 <td>{{ student["Full Name"] }}</td>
             </tr>
-
             <tr>
                 <th>Grade Level</th>
                 <td>{{ student["Grade Level"] }}</td>
             </tr>
-
             <tr>
                 <th>Sport</th>
                 <td>{{ student["Sports Events"] }}</td>
@@ -55,15 +52,15 @@
         </table>
     </div>
 
+    {% for group_title, grades in grouped_grades.items() %}
+
     <div class="card">
-        <h2>My Grades</h2>
+        <h2>{{ group_title }}</h2>
 
         <div style="overflow-x:auto;">
             <table class="student-table">
                 <thead>
                     <tr>
-                        <th>Academic Year</th>
-                        <th>Term</th>
                         <th>Subject</th>
                         <th>Midterm</th>
                         <th>Final</th>
@@ -79,9 +76,7 @@
                 <tbody>
                     {% for grade in grades %}
                     <tr>
-                        <td>{{ grade.academic_year }}</td>
-                        <td>{{ grade.term }}</td>
-                        <td>{{ grade.subject }}</td>
+                        <td class="subject-text">{{ grade.subject }}</td>
                         <td>{{ grade.midterm }}</td>
                         <td>{{ grade.final }}</td>
                         <td>{{ grade.q1 }}</td>
@@ -89,13 +84,24 @@
                         <td>{{ grade.q3 }}</td>
                         <td>{{ grade.q4 }}</td>
                         <td>{{ grade.final_grade }}</td>
-                        <td>{{ grade.remarks }}</td>
+
+                        <td>
+                            {% if grade.remarks|string|upper == "PASSED" %}
+                                <span style="color:green;font-weight:bold;">PASSED</span>
+                            {% elif grade.remarks|string|upper == "FAILED" %}
+                                <span style="color:red;font-weight:bold;">FAILED</span>
+                            {% else %}
+                                {{ grade.remarks }}
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    {% endfor %}
 
     {% else %}
 
