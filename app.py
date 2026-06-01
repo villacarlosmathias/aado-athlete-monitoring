@@ -651,14 +651,39 @@ def student_dashboard():
     if student_records.empty:
         return render_template(
             "student_dashboard.html",
-            student=None
+            student=None,
+            grades=[]
         )
 
     student = student_records.iloc[0].to_dict()
 
+    grades = []
+
+    for _, row in student_records.iterrows():
+
+        subject = get_subject(row)
+
+        if subject.strip() == "":
+            continue
+
+        grades.append({
+            "academic_year": show_value(row.get("Academic Year")),
+            "term": normalize_term(row.get("Term")),
+            "subject": subject,
+            "midterm": number_or_blank(row.get("Midterm")),
+            "final": number_or_blank(row.get("Final")),
+            "q1": number_or_blank(row.get("Q1")),
+            "q2": number_or_blank(row.get("Q2")),
+            "q3": number_or_blank(row.get("Q3")),
+            "q4": number_or_blank(row.get("Q4")),
+            "final_grade": number_or_blank(row.get("Final Term Grade")),
+            "remarks": show_value(row.get("Remarks"))
+        })
+
     return render_template(
         "student_dashboard.html",
-        student=student
+        student=student,
+        grades=grades
     )
 
 @app.route("/edit_student_own_profile", methods=["GET", "POST"])
