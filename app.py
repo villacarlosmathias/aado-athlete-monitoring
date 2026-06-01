@@ -637,10 +637,7 @@ def dashboard():
 @app.route("/student_dashboard")
 def student_dashboard():
 
-    student_id = session.get("student_id")
-
-    if not student_id:
-        student_id = session.get("username")
+    student_id = session.get("student_id") or session.get("username")
 
     df = load_data()
 
@@ -652,10 +649,19 @@ def student_dashboard():
         return render_template(
             "student_dashboard.html",
             student=None,
-            grouped_grades={}
+            grouped_grades={},
+            student_level=""
         )
 
     student = student_records.iloc[0].to_dict()
+    grade_level = str(student.get("Grade Level", ""))
+
+    if is_college(grade_level):
+        student_level = "COLLEGE"
+    elif is_shs(grade_level):
+        student_level = "SHS"
+    else:
+        student_level = "JHS"
 
     grouped_grades = {}
 
@@ -689,8 +695,10 @@ def student_dashboard():
     return render_template(
         "student_dashboard.html",
         student=student,
-        grouped_grades=grouped_grades
+        grouped_grades=grouped_grades,
+        student_level=student_level
     )
+
 
 @app.route("/edit_student_own_profile", methods=["GET", "POST"])
 def edit_student_own_profile():

@@ -3,6 +3,50 @@
 <head>
     <title>Student Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        .grades-wrapper {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .grades-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .grades-table th,
+        .grades-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            text-align: center;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        .grades-table th {
+            background: #1d63b7;
+            color: white;
+        }
+
+        .subject-cell {
+            text-align: left !important;
+            width: 40%;
+            font-weight: 600;
+        }
+
+        .passed {
+            color: green;
+            font-weight: bold;
+        }
+
+        .failed {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body>
@@ -57,39 +101,59 @@
     <div class="card">
         <h2>{{ group_title }}</h2>
 
-        <div style="overflow-x:auto;">
-            <table class="student-table">
+        <div class="grades-wrapper">
+            <table class="grades-table">
                 <thead>
                     <tr>
-                        <th>Subject</th>
-                        <th>Midterm</th>
-                        <th>Final</th>
-                        <th>Q1</th>
-                        <th>Q2</th>
-                        <th>Q3</th>
-                        <th>Q4</th>
-                        <th>Final Grade</th>
-                        <th>Remarks</th>
+                        <th class="subject-cell">Subject</th>
+
+                        {% if student_level == "SHS" %}
+                            <th>Midterm</th>
+                            <th>Final</th>
+                            <th>Final Grade</th>
+                            <th>Remarks</th>
+
+                        {% elif student_level == "JHS" %}
+                            <th>Q1</th>
+                            <th>Q2</th>
+                            <th>Q3</th>
+                            <th>Q4</th>
+                            <th>Final Grade</th>
+                            <th>Remarks</th>
+
+                        {% else %}
+                            <th>Final</th>
+                            <th>Remarks</th>
+                        {% endif %}
                     </tr>
                 </thead>
 
                 <tbody>
                     {% for grade in grades %}
                     <tr>
-                        <td class="subject-text">{{ grade.subject }}</td>
-                        <td>{{ grade.midterm }}</td>
-                        <td>{{ grade.final }}</td>
-                        <td>{{ grade.q1 }}</td>
-                        <td>{{ grade.q2 }}</td>
-                        <td>{{ grade.q3 }}</td>
-                        <td>{{ grade.q4 }}</td>
-                        <td>{{ grade.final_grade }}</td>
+                        <td class="subject-cell">{{ grade.subject }}</td>
+
+                        {% if student_level == "SHS" %}
+                            <td>{{ grade.midterm }}</td>
+                            <td>{{ grade.final }}</td>
+                            <td>{{ grade.final_grade }}</td>
+
+                        {% elif student_level == "JHS" %}
+                            <td>{{ grade.q1 }}</td>
+                            <td>{{ grade.q2 }}</td>
+                            <td>{{ grade.q3 }}</td>
+                            <td>{{ grade.q4 }}</td>
+                            <td>{{ grade.final_grade }}</td>
+
+                        {% else %}
+                            <td>{{ grade.final }}</td>
+                        {% endif %}
 
                         <td>
                             {% if grade.remarks|string|upper == "PASSED" %}
-                                <span style="color:green;font-weight:bold;">PASSED</span>
+                                <span class="passed">PASSED</span>
                             {% elif grade.remarks|string|upper == "FAILED" %}
-                                <span style="color:red;font-weight:bold;">FAILED</span>
+                                <span class="failed">FAILED</span>
                             {% else %}
                                 {{ grade.remarks }}
                             {% endif %}
