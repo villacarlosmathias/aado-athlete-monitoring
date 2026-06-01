@@ -397,6 +397,9 @@ def login():
             session["fullname"] = user[4]
             session["position"] = user[5]
 
+            if user[2] == "student":
+                return redirect("/student_dashboard")
+
             return redirect("/")
 
     return render_template("login.html", error=error)
@@ -417,7 +420,7 @@ def register():
 
         role = request.form.get("role")
 
-        if role not in ["super_admin", "admin_jhs_shs", "admin_college"]:
+        if role not in ["super_admin", "admin_jhs_shs", "admin_college", "student"]:
             error = "Invalid role selected"
 
         else:
@@ -535,7 +538,20 @@ def protect_pages():
     if not session.get("logged_in"):
         return redirect("/login")
 
-    if session.get("role") == "assistant":
+    role = session.get("role")
+
+    if role == "student":
+        student_allowed_routes = [
+            "student_dashboard",
+            "edit_student_own_profile",
+            "logout",
+            "static"
+        ]
+
+        if request.endpoint not in student_allowed_routes:
+            return redirect("/student_dashboard")
+
+    if role == "assistant":
         assistant_allowed_routes = [
             "student_list",
             "add_student",
@@ -613,6 +629,66 @@ def dashboard():
         total_sports=total_sports
     )
 
+
+@app.route("/student_dashboard")
+def student_dashboard():
+
+    username = session.get("username")
+
+    df = load_data()
+
+    student_records = df[
+        df["Student ID"].astype(str) == str(username)
+    ]
+
+    if student_records.empty:
+        return render_template(
+            "student_dashboard.html",
+            student=None
+        )
+
+    student = student_records.iloc[0].to_dict()
+
+    return render_template(
+        "student_dashboard.html",
+        student=student
+    )
+
+@app.route("/edit_student_own_profile", methods=["GET", "POST"])
+def edit_student_own_profile():
+
+    username = session.get("username")
+
+    df = load_data()
+
+    student_records = df[
+        df["Student ID"].astype(str) == str(username)
+    ]
+
+    if student_records.empty:
+        return "Student profile not found. Please contact AADO."
+
+    student = student_records.iloc[0].to_dict()
+
+    if request.method == "POST":
+
+        contact_number = request.form.get("contact_number", "")
+        email = request.form.get("email", "")
+
+        mask = df["Student ID"].astype(str) == str(username)
+
+        df.loc[mask, "Contact Number"] = contact_number
+        df.loc[mask, "Email"] = email
+
+        save_data(df)
+
+        return redirect("/student_dashboard")
+
+    return render_template(
+        "edit_student_own_profile.html",
+        student=student,
+        show_value=show_value
+    )
 
 @app.route("/student_list")
 def student_list():

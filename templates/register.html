@@ -2,61 +2,54 @@
 <html>
 <head>
     <title>Register</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
-<body class="login-page">
+<body class="login-body">
 
-<div class="login-container">
+<div class="login-box">
 
-    <div class="login-card">
+    <h2>Create Account</h2>
 
-        <h1>Create Admin Account</h1>
+    {% if error %}
+        <p style="color:red; text-align:center;">{{ error }}</p>
+    {% endif %}
 
-        {% if error %}
-            <p class="login-error">{{ error }}</p>
-        {% endif %}
+    {% if success %}
+        <p style="color:green; text-align:center;">{{ success }}</p>
+    {% endif %}
 
-        {% if success %}
-            <p style="color:green; text-align:center;">
-                {{ success }}
-            </p>
-        {% endif %}
+    <form method="POST">
 
-        <form method="POST">
+        <input type="text"
+               name="fullname"
+               placeholder="Full Name"
+               required>
 
-            <input type="text"
-                   name="fullname"
-                   placeholder="Full Name"
-                   required>
+        <input type="text"
+               name="position"
+               placeholder="Position / Student Athlete"
+               value="Student Athlete"
+               required>
 
-            <input type="text"
-                   name="position"
-                   placeholder="Position"
-                   required>
+        <input type="text"
+               name="username"
+               placeholder="Student ID or Username"
+               required>
 
-            <input type="text"
-                   name="username"
-                   placeholder="Username"
-                   required>
+        <input type="password"
+               name="password"
+               placeholder="Password"
+               required>
 
-            <input type="password"
-                   name="password"
-                   placeholder="Password"
-                   required>
+        <select name="role" required>
+            <option value="">Select Role</option>
 
-            <select name="role" required>
+            <option value="student">
+                Student Athlete
+            </option>
 
-                <option value="">
-                    Select Role
-                </option>
-
-                <option value="super_admin">
-                    Super Admin
-                </option>
-
+            {% if session.get("role") == "super_admin" %}
                 <option value="admin_jhs_shs">
                     JHS / SHS Admin
                 </option>
@@ -65,20 +58,22 @@
                     College Admin
                 </option>
 
-            </select>
+                <option value="super_admin">
+                    Super Admin
+                </option>
+            {% endif %}
+        </select>
 
-            <button type="submit">
-                Register
-            </button>
+        <button type="submit">
+            Register
+        </button>
 
-        </form>
+    </form>
 
-        <p style="margin-top:20px;">
-            Already have account?
-            <a href="/login">Login here</a>
-        </p>
-
-    </div>
+    <p>
+        Already have account?
+        <a href="/login">Login here</a>
+    </p>
 
 </div>
 
