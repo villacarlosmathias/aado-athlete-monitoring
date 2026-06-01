@@ -1813,7 +1813,7 @@ def academic_monitoring_form(student_id):
     academic_year = request.args.get("academic_year", "")
     term = request.args.get("term", "")
     period = request.args.get("period", "")
-
+    remarks_input = request.args.get("remarks", "").strip()
     case_no = generate_case_no(grade_level)
 
     ph_time = datetime.now(ZoneInfo("Asia/Manila"))
@@ -2233,9 +2233,12 @@ def academic_monitoring_form(student_id):
     remarks_table = Table(
         [[
             Paragraph(
-                "<b>Remarks:</b><br/><br/>"
-                "_______________________________________________<br/><br/>"
-                "_______________________________________________",
+                "<b>Remarks:</b><br/><br/>" +
+                (
+                    remarks_input.replace("\n", "<br/>")
+                    if remarks_input
+                    else "_______________________________________________<br/><br/>_______________________________________________"
+                ),
                 normal
             ),
             status_table
