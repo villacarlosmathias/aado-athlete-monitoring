@@ -71,6 +71,11 @@ def init_users_table():
         )
 
     with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS student_id TEXT"
+        )
+
+    with engine.begin() as conn:
         result = conn.exec_driver_sql(
             "SELECT COUNT(*) FROM users WHERE role = %s",
             ("super_admin",)
@@ -374,7 +379,7 @@ def login():
         with engine.begin() as conn:
             user = conn.exec_driver_sql(
                 """
-                SELECT username, password, role, status, fullname, position
+                SELECT username, password, role, status, fullname, position, student_id
                 FROM users
                 WHERE username = %s
                 """,
@@ -396,6 +401,7 @@ def login():
             session["role"] = user[2]
             session["fullname"] = user[4]
             session["position"] = user[5]
+            session["student_id"] = user[6]
 
             if user[2] == "student":
                 return redirect("/student_dashboard")
@@ -414,21 +420,20 @@ def register():
 
         username = request.form.get("username")
         password = request.form.get("password")
-
         fullname = request.form.get("fullname")
         position = request.form.get("position")
-
         role = request.form.get("role")
+        student_id = request.form.get("student_id", "")
 
         if role not in ["super_admin", "admin_jhs_shs", "admin_college", "student"]:
             error = "Invalid role selected"
 
+        elif role == "student" and student_id.strip() == "":
+            error = "Student ID is required for student athletes"
+
         else:
-
             try:
-
                 with engine.begin() as conn:
-
                     conn.exec_driver_sql(
                         """
                         INSERT INTO users
@@ -438,9 +443,9 @@ def register():
                             fullname,
                             position,
                             role,
-                            status
+                            status,
+                            student_id
                         )
-
                         VALUES
                         (
                             %s,
@@ -448,25 +453,24 @@ def register():
                             %s,
                             %s,
                             %s,
-                            'pending'
+                            'pending',
+                            %s
                         )
                         """,
-
                         (
                             username,
                             password,
                             fullname,
                             position,
-                            role
+                            role,
+                            student_id
                         )
                     )
 
                 success = "Account registered. Please wait for Super Admin approval."
 
             except Exception as e:
-
                 print("REGISTER ERROR:", e)
-
                 error = "Username already exists"
 
     return render_template(
@@ -633,12 +637,15 @@ def dashboard():
 @app.route("/student_dashboard")
 def student_dashboard():
 
-    username = session.get("username")
+    student_id = session.get("student_id")
+
+    if not student_id:
+        student_id = session.get("username")
 
     df = load_data()
 
     student_records = df[
-        df["Student ID"].astype(str) == str(username)
+        df["Student ID"].astype(str) == str(student_id)
     ]
 
     if student_records.empty:
@@ -657,12 +664,15 @@ def student_dashboard():
 @app.route("/edit_student_own_profile", methods=["GET", "POST"])
 def edit_student_own_profile():
 
-    username = session.get("username")
+    student_id = session.get("student_id")
+
+    if not student_id:
+        student_id = session.get("username")
 
     df = load_data()
 
     student_records = df[
-        df["Student ID"].astype(str) == str(username)
+        df["Student ID"].astype(str) == str(student_id)
     ]
 
     if student_records.empty:
@@ -675,7 +685,7 @@ def edit_student_own_profile():
         contact_number = request.form.get("contact_number", "")
         email = request.form.get("email", "")
 
-        mask = df["Student ID"].astype(str) == str(username)
+        mask = df["Student ID"].astype(str) == str(student_id)
 
         df.loc[mask, "Contact Number"] = contact_number
         df.loc[mask, "Email"] = email
