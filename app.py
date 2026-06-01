@@ -2433,6 +2433,59 @@ def reports():
         total_college=total_college
     )
 
+@app.route("/edit_student/<student_id>", methods=["GET", "POST"])
+def edit_student(student_id):
+
+    df = load_data()
+    visible_df = filter_data_by_role(df)
+
+    student_records = visible_df[
+        visible_df["Student ID"].astype(str) == str(student_id)
+    ]
+
+    if student_records.empty:
+        return "Student not found"
+
+    student = student_records.iloc[0].to_dict()
+
+    if request.method == "POST":
+
+        full_name = request.form.get("full_name", "")
+        grade_level = request.form.get("grade_level", "")
+        section = request.form.get("section", "")
+        strand = request.form.get("strand", "")
+        year_level = request.form.get("year_level", "")
+        course_program = request.form.get("course_program", "")
+        college = request.form.get("college", "")
+        sport = request.form.get("sport", "")
+
+        mask = df["Student ID"].astype(str) == str(student_id)
+
+        df.loc[mask, "Full Name"] = full_name
+        df.loc[mask, "Grade Level"] = grade_level
+        df.loc[mask, "Section"] = section
+        df.loc[mask, "Strand"] = strand
+        df.loc[mask, "Year Level"] = year_level
+        df.loc[mask, "Course / Program"] = course_program
+        df.loc[mask, "College"] = college
+        df.loc[mask, "Sports Events"] = sport
+        df.loc[mask, "Sport"] = sport
+
+        save_data(df)
+
+        return redirect("/student_list")
+
+    basic_ed_sports = get_sports_by_group("basic_ed")
+    college_sports = get_sports_by_group("college")
+
+    return render_template(
+        "edit_student.html",
+        student=student,
+        basic_ed_sports=basic_ed_sports,
+        college_sports=college_sports,
+        show_value=show_value
+    )
+
 @app.route("/add_student", methods=["GET", "POST"])
 def add_student():
     df = load_data()

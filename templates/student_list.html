@@ -140,14 +140,19 @@
                         <div class="action-buttons">
 
                             <a class="table-btn add-btn"
-                               href="/add_grade/{{ row['Student ID'] }}">
-                                Add Subjects
-                            </a>
+                                href="/add_grade/{{ row['Student ID'] }}">
+                                    Add Subjects
+                                </a>
 
-                            <a class="table-btn edit-btn"
+                                <a class="table-btn edit-btn"
+                                href="/edit_student/{{ row['Student ID'] }}">
+                                    Edit Profile
+                                </a>
+
+                                <a class="table-btn edit-btn"
                                 href="/monitoring_form_filter/{{ row['Student ID'] }}">
                                     Monitoring Form
-                            </a>
+                                </a>
 
                             {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
                             <a class="table-btn edit-btn"
