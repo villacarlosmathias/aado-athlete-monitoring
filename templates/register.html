@@ -3,20 +3,87 @@
 <head>
     <title>Register</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(135deg, #142b73, #1e96a8);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .register-box {
+            width: 420px;
+            background: white;
+            padding: 35px;
+            border-radius: 18px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+        }
+
+        .register-box h2 {
+            text-align: center;
+            color: #1f3b93;
+            margin-bottom: 25px;
+            font-size: 30px;
+        }
+
+        .register-box input,
+        .register-box select {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 14px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 15px;
+            box-sizing: border-box;
+        }
+
+        .register-box button {
+            width: 100%;
+            padding: 14px;
+            background: #1f3b93;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .register-box p {
+            text-align: center;
+            margin-top: 18px;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .success {
+            color: green;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
 </head>
 
-<body class="login-body">
+<body>
 
-<div class="login-box">
+<div class="register-box">
 
     <h2>Create Account</h2>
 
     {% if error %}
-        <p style="color:red; text-align:center;">{{ error }}</p>
+        <p class="error">{{ error }}</p>
     {% endif %}
 
     {% if success %}
-        <p style="color:green; text-align:center;">{{ success }}</p>
+        <p class="success">{{ success }}</p>
     {% endif %}
 
     <form method="POST">
@@ -29,7 +96,6 @@
         <input type="text"
                name="position"
                placeholder="Position / Student Athlete"
-               value="Student Athlete"
                required>
 
         <input type="text"
@@ -45,28 +111,13 @@
         <select name="role" required>
             <option value="">Select Role</option>
 
-            <option value="student">
-                Student Athlete
-            </option>
-
-            {% if session.get("role") == "super_admin" %}
-                <option value="admin_jhs_shs">
-                    JHS / SHS Admin
-                </option>
-
-                <option value="admin_college">
-                    College Admin
-                </option>
-
-                <option value="super_admin">
-                    Super Admin
-                </option>
-            {% endif %}
+            <option value="student">Student Athlete</option>
+            <option value="admin_jhs_shs">JHS / SHS Admin</option>
+            <option value="admin_college">College Admin</option>
+            <option value="super_admin">Super Admin</option>
         </select>
 
-        <button type="submit">
-            Register
-        </button>
+        <button type="submit">Register</button>
 
     </form>
 
