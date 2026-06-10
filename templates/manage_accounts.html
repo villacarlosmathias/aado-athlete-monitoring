@@ -14,14 +14,29 @@
     </div>
 
     <div class="menu">
-        <a href="/">🏠 Dashboard</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
         <a href="/student_list">👥 Student List</a>
         <a href="/add_student">➕ Add New Student</a>
-        <a href="/grades">📘 Grades</a>
-        <a href="/reports">📊 Reports</a>
-        <a href="/promote_students">⬆️ Promote Students</a>
-        <a href="/manage_accounts">👤 Manage Accounts</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
+
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
+        {% endif %}
+
         <a href="/logout">🚪 Logout</a>
+
     </div>
 </div>
 
@@ -49,17 +64,29 @@
                 <td>{{ user[2] }}</td>
                 <td>{{ user[3] }}</td>
                 <td>
+
                     {% if user[3] == "pending" %}
-                        <a class="table-btn add-btn" href="/approve_account/{{ user[0] }}">
+                        <a class="table-btn add-btn"
+                           href="/approve_account/{{ user[0] }}">
                             Approve
                         </a>
 
-                        <a class="table-btn delete-btn" href="/reject_account/{{ user[0] }}">
+                        <a class="table-btn delete-btn"
+                           href="/reject_account/{{ user[0] }}">
                             Reject
                         </a>
-                    {% else %}
-                        No action
                     {% endif %}
+
+                    {% if user[1] != session.get("username") %}
+                        <a class="table-btn delete-btn"
+                           href="/delete_account/{{ user[0] }}"
+                           onclick="return confirm('Are you sure you want to permanently delete this account?');">
+                            Delete
+                        </a>
+                    {% else %}
+                        <span style="color: gray;">Current Account</span>
+                    {% endif %}
+
                 </td>
             </tr>
             {% endfor %}

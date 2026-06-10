@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student List Report</title>
+
+    <style>
+        @page {
+            size: landscape;
+            margin: 0.3in;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 10px;
+            color: #111;
+            font-size: 11px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 18px;
+            margin: 0 0 5px 0;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 14px;
+            margin: 0 0 5px 0;
+        }
+
+        p {
+            text-align: center;
+            font-size: 11px;
+            margin: 4px 0;
+        }
+
+        .top-actions {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        button {
+            background: #1f3b93;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            table-layout: fixed;
+        }
+
+        th {
+            background: #1f3b93;
+            color: white;
+            padding: 4px;
+            border: 1px solid #000;
+            font-size: 10px;
+        }
+
+        td {
+            padding: 3px;
+            border: 1px solid #000;
+            font-size: 10px;
+            word-wrap: break-word;
+        }
+
+        th:nth-child(1), td:nth-child(1) {
+            width: 18%;
+            text-align: center;
+        }
+
+        th:nth-child(2), td:nth-child(2) {
+            width: 42%;
+            text-align: left;
+        }
+
+        th:nth-child(3), td:nth-child(3) {
+            width: 18%;
+            text-align: center;
+        }
+
+        th:nth-child(4), td:nth-child(4) {
+            width: 22%;
+            text-align: center;
+        }
+
+        .summary {
+            margin-top: 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                font-size: 9px;
+            }
+
+            h1 {
+                font-size: 14px;
+            }
+
+            h2 {
+                font-size: 11px;
+            }
+
+            p {
+                font-size: 9px;
+            }
+
+            th {
+                font-size: 8px;
+                padding: 2px;
+            }
+
+            td {
+                font-size: 8px;
+                padding: 2px;
+            }
+
+            table {
+                margin-top: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="no-print top-actions">
+    <button onclick="window.print()">
+        🖨 Print
+    </button>
+</div>
+
+<h1>AADO Student-Athlete List</h1>
+
+<h2>
+    {% if grade_level %}
+        {{ grade_level }}
+    {% else %}
+        All Grade Levels
+    {% endif %}
+</h2>
+
+<p>
+    {% if sport %}
+        Sport: {{ sport }}
+    {% else %}
+        Sport: All Sports
+    {% endif %}
+</p>
+
+<p class="summary">
+    Total Students: {{ students|length }}
+</p>
+
+<table>
+    <tr>
+        <th>Student ID</th>
+        <th>Full Name</th>
+        <th>Grade Level</th>
+        <th>Sport</th>
+    </tr>
+
+    {% for student in students %}
+    <tr>
+        <td>{{ student["Student ID"] }}</td>
+        <td>{{ student["Full Name"] }}</td>
+        <td>{{ student["Grade Level"] }}</td>
+        <td>{{ student["Sports Events"] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>

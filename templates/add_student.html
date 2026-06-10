@@ -15,22 +15,24 @@
 
     <div class="menu">
 
-        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+        {% if session.get("role") != "assistant" %}
             <a href="/">🏠 Dashboard</a>
         {% endif %}
 
         <a href="/student_list">👥 Student List</a>
         <a href="/add_student">➕ Add New Student</a>
 
-        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+        {% if session.get("role") != "assistant" %}
             <a href="/grades">📘 Grades</a>
             <a href="/reports">📊 Reports</a>
         {% endif %}
 
-       {% if session.get("role") == "super_admin" %}
+        {% if session.get("role") == "super_admin" %}
             <a href="/promote_students">⬆️ Promote Students</a>
             <a href="/manage_accounts">👤 Manage Accounts</a>
             <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
         {% endif %}
 
         <a href="/logout">🚪 Logout</a>
@@ -42,7 +44,7 @@
 
     <div class="topbar">
         <h2>Add New Student Athlete</h2>
-        <h3>Hi, {{ session.get("username", "User") }}</h3>
+        <h3>Hi, {{ session.get("fullname", session.get("username", "User")) }}</h3>
     </div>
 
     <div class="card">
@@ -62,70 +64,135 @@
                     <input type="text" name="full_name" placeholder="Example: Dela Cruz, Juan" required>
                 </div>
 
-                <div class="form-group">
-                    <label>Grade Level</label>
-                    <select name="grade_level" id="grade_level" required onchange="toggleCollegeFields()">
-                        <option value="">Select Level</option>
-                        <option value="Grade 7">Grade 7</option>
-                        <option value="Grade 8">Grade 8</option>
-                        <option value="Grade 9">Grade 9</option>
-                        <option value="Grade 10">Grade 10</option>
-                        <option value="Grade 11">Grade 11</option>
-                        <option value="Grade 12">Grade 12</option>
-                        <option value="College">College</option>
-                    </select>
-                </div>
+                {% if session.get("role") == "admin_college" %}
 
-                <div id="jhsShsFields" class="form-group">
-                    <label>Section</label>
-                    <input type="text" name="section" placeholder="Example: St. Matthew / STEM 12-A">
-                </div>
+                    <input type="hidden" name="grade_level" value="College">
 
-                <div id="strandField" class="form-group" style="display:none;">
-                    <label>Strand</label>
-                    <select name="strand">
-                        <option value="">Select Strand</option>
-                        <option value="STEM">STEM</option>
-                        <option value="ABM">ABM</option>
-                        <option value="HUMSS">HUMSS</option>
-                        <option value="GAS">GAS</option>
-                        <option value="TVL">TVL</option>
-                    </select>
-                </div>
-
-                <div id="collegeFields" style="display:none; grid-column: span 2;">
-                    <div class="form-grid">
-
-                        <div class="form-group">
-                            <label>Year Level</label>
-                            <select name="year_level">
-                                <option value="">Select Year Level</option>
-                                <option value="1st Year">1st Year</option>
-                                <option value="2nd Year">2nd Year</option>
-                                <option value="3rd Year">3rd Year</option>
-                                <option value="4th Year">4th Year</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Course / Program</label>
-                            <input type="text" name="course_program" placeholder="Example: BS Information Technology">
-                        </div>
-
-                        <div class="form-group">
-                            <label>College / Department</label>
-                            <input type="text" name="college_department" placeholder="Example: College of Computing">
-                        </div>
-
+                    <div class="form-group">
+                        <label>Year Level</label>
+                        <select name="year_level" required>
+                            <option value="">Select Year Level</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Sports Events</label>
-                    <select name="sport" id="sport" required>
-                    <option value="">Select Sport</option>
-                </select>
-                </div>
+                    <div class="form-group">
+                        <label>Course / Program</label>
+                        <select name="course_program" id="course_program" onchange="updateDepartment()" required>
+                            <option value="">Select Course / Program</option>
+
+                            {% for program in programs %}
+                                <option value="{{ program.program_name }}"
+                                        data-department="{{ program.department_name }}">
+                                    {{ program.program_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>College / Department</label>
+                        <input type="text"
+                               name="college_department"
+                               id="college_department"
+                               readonly
+                               required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sports Events</label>
+                        <select name="sport" required>
+                            <option value="">Select Sport</option>
+                            {% for sport in college_sports %}
+                                <option value="{{ sport }}">{{ sport }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                {% else %}
+
+                    <div class="form-group">
+                        <label>Grade Level</label>
+                        <select name="grade_level" id="grade_level" required onchange="toggleFields()">
+                            <option value="">Select Grade Level</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                            <option value="Grade 10">Grade 10</option>
+                            <option value="Grade 11">Grade 11</option>
+                            <option value="Grade 12">Grade 12</option>
+
+                            <option value="College">College</option>
+                        </select>
+                    </div>
+
+                    <div id="sectionField" class="form-group">
+                        <label>Section</label>
+                        <input type="text" name="section" placeholder="Example: St. Matthew / STEM 12-A">
+                    </div>
+
+                    <div id="strandField" class="form-group" style="display:none;">
+                        <label>Strand</label>
+                        <select name="strand">
+                            <option value="">Select Strand</option>
+                            <option value="STEM">STEM</option>
+                            <option value="ABM">ABM</option>
+                            <option value="HUMSS">HUMSS</option>
+                            <option value="GAS">GAS</option>
+                            <option value="TVL">TVL</option>
+                        </select>
+                    </div>
+
+                    <div id="collegeFields" style="display:none; grid-column: span 2;">
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label>Year Level</label>
+                                <select name="year_level">
+                                    <option value="">Select Year Level</option>
+                                    <option value="1st Year">1st Year</option>
+                                    <option value="2nd Year">2nd Year</option>
+                                    <option value="3rd Year">3rd Year</option>
+                                    <option value="4th Year">4th Year</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Course / Program</label>
+                                <select name="course_program" id="course_program_super" onchange="updateDepartmentSuper()">
+                                    <option value="">Select Course / Program</option>
+
+                                    {% for program in programs %}
+                                        <option value="{{ program.program_name }}"
+                                                data-department="{{ program.department_name }}">
+                                            {{ program.program_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>College / Department</label>
+                                <input type="text"
+                                       name="college_department"
+                                       id="college_department_super"
+                                       readonly>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sports Events</label>
+                        <select name="sport" id="sport" required>
+                            <option value="">Select Sport</option>
+                        </select>
+                    </div>
+
+                {% endif %}
 
                 <div class="form-group">
                     <label>Academic Year</label>
@@ -135,13 +202,8 @@
             </div>
 
             <div class="form-actions">
-                <button class="btn" type="submit">
-                    Save Student
-                </button>
-
-                <a href="/student_list" class="table-btn delete-btn">
-                    Cancel
-                </a>
+                <button class="btn" type="submit">Save Student</button>
+                <a href="/student_list" class="table-btn delete-btn">Cancel</a>
             </div>
 
         </form>
@@ -150,18 +212,50 @@
 </div>
 
 <script>
-const basicEdSports = JSON.parse('{{ basic_ed_sports|tojson|safe }}');
-const collegeSports = JSON.parse('{{ college_sports|tojson|safe }}');
+const basicEdSports = {{ basic_ed_sports | tojson }};
+const collegeSports = {{ college_sports | tojson }};
+
+function updateDepartment() {
+    const programSelect = document.getElementById("course_program");
+    const departmentInput = document.getElementById("college_department");
+
+    if (!programSelect || !departmentInput) {
+        return;
+    }
+
+    const selectedOption = programSelect.options[programSelect.selectedIndex];
+    const department = selectedOption.getAttribute("data-department");
+
+    departmentInput.value = department || "";
+}
+
+function updateDepartmentSuper() {
+    const programSelect = document.getElementById("course_program_super");
+    const departmentInput = document.getElementById("college_department_super");
+
+    if (!programSelect || !departmentInput) {
+        return;
+    }
+
+    const selectedOption = programSelect.options[programSelect.selectedIndex];
+    const department = selectedOption.getAttribute("data-department");
+
+    departmentInput.value = department || "";
+}
 
 function updateSportsDropdown() {
-    const gradeLevel = document.getElementById("grade_level").value;
+    const gradeLevel = document.getElementById("grade_level");
     const sportSelect = document.getElementById("sport");
+
+    if (!gradeLevel || !sportSelect) {
+        return;
+    }
 
     let sportsList = [];
 
-    if (gradeLevel === "College") {
+    if (gradeLevel.value === "College") {
         sportsList = collegeSports;
-    } else if (gradeLevel !== "") {
+    } else if (gradeLevel.value !== "") {
         sportsList = basicEdSports;
     }
 
@@ -180,31 +274,44 @@ function updateSportsDropdown() {
     });
 }
 
-function toggleCollegeFields() {
-    const gradeLevel = document.getElementById("grade_level").value;
-    const collegeFields = document.getElementById("collegeFields");
+function toggleFields() {
+    const gradeLevel = document.getElementById("grade_level");
     const strandField = document.getElementById("strandField");
-    const jhsShsFields = document.getElementById("jhsShsFields");
+    const collegeFields = document.getElementById("collegeFields");
+    const sectionField = document.getElementById("sectionField");
 
-    if (gradeLevel === "College") {
+    if (!gradeLevel) {
+        return;
+    }
+
+    if (gradeLevel.value === "College") {
         collegeFields.style.display = "block";
-        jhsShsFields.style.display = "none";
+        sectionField.style.display = "none";
         strandField.style.display = "none";
     } else {
         collegeFields.style.display = "none";
-        jhsShsFields.style.display = "flex";
 
-        if (gradeLevel === "Grade 12") {
-            strandField.style.display = "flex";
-        } else {
-            strandField.style.display = "none";
+        if (sectionField) {
+            sectionField.style.display = "flex";
+        }
+
+        if (strandField) {
+            if (gradeLevel.value === "Grade 11" || gradeLevel.value === "Grade 12") {
+                strandField.style.display = "flex";
+            } else {
+                strandField.style.display = "none";
+            }
         }
     }
 
     updateSportsDropdown();
 }
 
-window.onload = toggleCollegeFields;
+document.addEventListener("DOMContentLoaded", function() {
+    toggleFields();
+    updateDepartment();
+    updateDepartmentSuper();
+});
 </script>
 
 </body>

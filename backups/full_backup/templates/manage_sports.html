@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Sports</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
+
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
+        {% endif %}
+
+        <a href="/logout">🚪 Logout</a>
+
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Manage Sports</h2>
+        <h3>Hi, {{ session.get("username", "User") }}</h3>
+    </div>
+
+    <div class="card">
+        <h2>Add Sport</h2>
+
+        <form method="POST">
+            <div class="filter-grid">
+                <input type="text" name="sport_name" placeholder="Sport Name" required>
+
+                <select name="level_group" required>
+                    <option value="">Select Group</option>
+                    <option value="basic_ed">JHS / SHS</option>
+                    <option value="college">College</option>
+                </select>
+
+                <button class="btn" type="submit">Add Sport</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Sports List</h2>
+
+        <table class="grades-table">
+            <tr>
+                <th>Sport</th>
+                <th>Group</th>
+                <th>Action</th>
+            </tr>
+
+            {% for sport in sports %}
+            <tr>
+                <td>{{ sport[1] }}</td>
+
+                <td>
+                    {% if sport[2] == "basic_ed" %}
+                        JHS / SHS
+                    {% else %}
+                        College
+                    {% endif %}
+                </td>
+
+                <td>
+                    <a class="table-btn delete-btn"
+                       href="/delete_sport/{{ sport[0] }}"
+                       onclick="return confirm('Delete this sport?')">
+                        Delete
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>

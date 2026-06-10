@@ -14,13 +14,29 @@
     </div>
 
     <div class="menu">
-        <a href="/">🏠 Dashboard</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
         <a href="/student_list">👥 Student List</a>
         <a href="/add_student">➕ Add New Student</a>
-        <a href="/grades">📘 Grades</a>
-        <a href="/reports">📊 Reports</a>
-        <a href="/promote_students">⬆️ Promote Students</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
+
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
+        {% endif %}
+
         <a href="/logout">🚪 Logout</a>
+
     </div>
 </div>
 

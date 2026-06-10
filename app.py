@@ -42,7 +42,7 @@ DATABASE_FILE = "database.db"
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "sqlite:///database.db"
+    "postgresql+psycopg2://aado_admin:Aado123!@localhost:5432/aado_db"
 )
 
 engine = create_engine(DATABASE_URL)
@@ -187,19 +187,31 @@ def filter_data_by_role(df):
     if df.empty:
         return df
 
+    grade_level = (
+        df["Grade Level"].astype(str).str.strip()
+        if "Grade Level" in df.columns
+        else pd.Series([""] * len(df), index=df.index)
+    )
+
+    sports_events = (
+        df["Sports Events"].astype(str).str.strip()
+        if "Sports Events" in df.columns
+        else pd.Series([""] * len(df), index=df.index)
+    )
+
+    college_sports = get_sports_by_group("college")
+
+    college_mask = (
+        grade_level.str.contains("College", case=False, na=False)
+        |
+        sports_events.isin(college_sports)
+    )
+
     if role == "admin_college":
-        return df[
-            df["Grade Level"]
-            .astype(str)
-            .str.contains("College", case=False, na=False)
-        ]
+        return df[college_mask]
 
     if role == "admin_jhs_shs":
-        return df[
-            ~df["Grade Level"]
-            .astype(str)
-            .str.contains("College", case=False, na=False)
-        ]
+        return df[~college_mask]
 
     return df
 
@@ -240,16 +252,24 @@ def show_value(val):
 def normalize_term(term):
     term = str(term).strip().upper()
 
-    if term in ["1ST", "1ST TERM", "FIRST"]:
-        return "1st"
-    if term in ["2ND", "2ND TERM", "SECOND"]:
-        return "2nd"
-    if term in ["3RD", "3RD TERM", "THIRD"]:
-        return "3rd"
-    if term in ["4TH", "4TH TERM", "FOURTH"]:
-        return "4th"
+    if term in ["", "NAN", "NONE"]:
+        return ""
 
-    return term.title()
+    if term in ["1ST", "1ST TERM", "FIRST", "FIRST TERM", "TERM 1", "TERM1", "1"]:
+        return "TERM 1"
+
+    if term in ["2ND", "2ND TERM", "SECOND", "SECOND TERM", "TERM 2", "TERM2", "2"]:
+        return "TERM 2"
+
+    if term in ["3RD", "3RD TERM", "THIRD", "THIRD TERM", "TERM 3", "TERM3", "3"]:
+        return "TERM 3"
+
+    return term
+
+def normalize_all_terms(df):
+    if "Term" in df.columns:
+        df["Term"] = df["Term"].astype(str).apply(normalize_term)
+    return df
 
 
 def get_subject(row):
@@ -311,16 +331,34 @@ def compute_average(values):
     return average, remarks
 
 
-def compute_college_remarks(final_grade):
-    final_grade = str(final_grade).strip().upper()
+def compute_college_remarks(grade):
+    grade = str(grade).strip().upper()
 
-    if final_grade == "" or final_grade == "NAN":
+    if grade == "" or grade == "NAN":
         return ""
 
-    if final_grade == "R":
-        return "Repeat"
+    if grade == "R":
+        return "REPEAT"
 
-    return "Passed"
+    if grade in ["INC", "INCOMPLETE"]:
+        return "INCOMPLETE"
+
+    if grade in ["DR", "DROP", "DROPPED"]:
+        return "DROPPED"
+
+    if grade in ["0", "0.0", "0.00"]:
+        return "FAILED"
+
+    try:
+        grade_num = float(grade)
+
+        if 1.00 <= grade_num <= 4.00:
+            return "PASSED"
+
+    except:
+        return ""
+
+    return ""
 
 def promote_grade_level(grade_level, year_level=""):
     grade_level = str(grade_level).strip()
@@ -372,7 +410,6 @@ def login():
     error = ""
 
     if request.method == "POST":
-
         username = request.form.get("username")
         password = request.form.get("password")
 
@@ -406,6 +443,9 @@ def login():
             if user[2] == "student":
                 return redirect("/student_dashboard")
 
+            if user[2] == "assistant":
+                return redirect("/student_list")
+
             return redirect("/")
 
     return render_template("login.html", error=error)
@@ -425,7 +465,7 @@ def register():
         role = request.form.get("role")
         student_id = request.form.get("student_id", "")
 
-        if role not in ["super_admin", "admin_jhs_shs", "admin_college", "student"]:
+        if role not in ["super_admin", "admin_jhs_shs", "admin_college", "assistant", "student"]:
             error = "Invalid role selected"
 
         elif role == "student" and student_id.strip() == "":
@@ -526,6 +566,37 @@ def reject_account(user_id):
     return redirect("/manage_accounts")
 
 
+@app.route("/delete_account/<int:user_id>")
+def delete_account(user_id):
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    current_username = session.get("username")
+
+    with engine.begin() as conn:
+        user = conn.exec_driver_sql(
+            """
+            SELECT username
+            FROM users
+            WHERE id = %s
+            """,
+            (user_id,)
+        ).fetchone()
+
+        if user and user[0] == current_username:
+            return redirect("/manage_accounts")
+
+        conn.exec_driver_sql(
+            """
+            DELETE FROM users
+            WHERE id = %s
+            """,
+            (user_id,)
+        )
+
+    return redirect("/manage_accounts")
+
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -586,14 +657,53 @@ def dashboard():
 
         total_students = df["Student ID"].astype(str).nunique()
 
-        failed_ids = df[
-            pd.to_numeric(
-                df["Final Term Grade"],
-                errors="coerce"
-            ) < 75
-        ]["Student ID"].astype(str).unique()
+        failed_student_ids = set()
 
-        failed_students = len(failed_ids)
+        for _, row in df.iterrows():
+
+            student_id = str(row.get("Student ID", "")).strip()
+            grade_level = str(row.get("Grade Level", "")).strip()
+
+            if student_id == "":
+                continue
+
+            # =========================
+            # COLLEGE FAILED LOGIC
+            # =========================
+            if is_college(grade_level):
+
+                grade = str(row.get("Final Term Grade", "")).strip().upper()
+
+                if grade in [
+                    "0",
+                    "0.0",
+                    "0.00",
+                    "R",
+                    "INC",
+                    "INCOMPLETE",
+                    "DR",
+                    "DROP",
+                    "DROPPED"
+                ]:
+                    failed_student_ids.add(student_id)
+
+            # =========================
+            # JHS / SHS FAILED LOGIC
+            # =========================
+            else:
+
+                grade = row.get("Final Term Grade")
+
+                try:
+                    grade_num = float(grade)
+
+                    if grade_num < 75:
+                        failed_student_ids.add(student_id)
+
+                except:
+                    pass
+
+        failed_students = len(failed_student_ids)
 
         passed_students = (
             total_students - failed_students
@@ -637,7 +747,10 @@ def dashboard():
 @app.route("/student_dashboard")
 def student_dashboard():
 
-    student_id = session.get("student_id") or session.get("username")
+    student_id = session.get("student_id")
+
+    if not student_id:
+        student_id = session.get("username")
 
     df = load_data()
 
@@ -649,8 +762,7 @@ def student_dashboard():
         return render_template(
             "student_dashboard.html",
             student=None,
-            grouped_grades={},
-            student_level=""
+            grouped_grades={}
         )
 
     student = student_records.iloc[0].to_dict()
@@ -697,8 +809,7 @@ def student_dashboard():
         student=student,
         grouped_grades=grouped_grades,
         student_level=student_level
-    )
-
+)
 
 @app.route("/edit_student_own_profile", methods=["GET", "POST"])
 def edit_student_own_profile():
@@ -753,14 +864,32 @@ def student_list():
             show_value=show_value
         )
 
-    sports = sorted(df["Sport"].dropna().astype(str).unique())
-    grade_levels = sorted(df["Grade Level"].dropna().astype(str).unique())
+    role = session.get("role")
+
+    if role == "admin_college":
+        sports = get_sports_by_group("college")
+    elif role == "admin_jhs_shs":
+        sports = get_sports_by_group("basic_ed")
+    else:
+        sports = (
+            get_sports_by_group("basic_ed")
+            + get_sports_by_group("college")
+        )
+
+    sports = sorted(list(set(sports)))
+
+    grade_levels = sorted(
+        df["Grade Level"]
+        .dropna()
+        .astype(str)
+        .unique()
+    )
 
     filtered_df = df.copy()
 
-    sport_filter = request.args.get("sport")
-    grade_filter = request.args.get("grade_level")
-    search = request.args.get("search")
+    sport_filter = request.args.get("sport", "")
+    grade_filter = request.args.get("grade_level", "")
+    search = request.args.get("search", "")
 
     if sport_filter:
         filtered_df = filtered_df[
@@ -779,8 +908,11 @@ def student_list():
             filtered_df["Student ID"].astype(str).str.contains(search, case=False, na=False)
         ]
 
-    students = filtered_df.drop_duplicates(subset=["Student ID"])
-    students = students.sort_values(by="Full Name")
+    students = (
+        filtered_df
+        .drop_duplicates(subset=["Student ID"])
+        .sort_values(by="Full Name")
+    )
 
     return render_template(
         "student_list.html",
@@ -789,7 +921,6 @@ def student_list():
         grade_levels=grade_levels,
         show_value=show_value
     )
-
 
 @app.route("/add_grade/<student_id>", methods=["GET", "POST"])
 def add_grade(student_id):
@@ -803,21 +934,18 @@ def add_grade(student_id):
         return "Student not found"
 
     student = student_data.iloc[0].to_dict()
-
     grade_level = str(student.get("Grade Level", ""))
 
     if is_college(grade_level):
         student_level = "COLLEGE"
-
     elif is_shs(grade_level):
         student_level = "SHS"
-
     else:
         student_level = "JHS"
 
     if request.method == "POST":
 
-        academic_year = request.form.get("academic_year")
+        academic_year = request.form.get("academic_year", "")
 
         subjects = request.form.getlist("subject[]")
         subject_sections = request.form.getlist("subject_section[]")
@@ -838,16 +966,18 @@ def add_grade(student_id):
             if subject == "":
                 continue
 
-            subject_section = (
-                subject_sections[i]
-                if i < len(subject_sections)
-                else ""
-            )
+            subject_section = subject_sections[i] if i < len(subject_sections) else ""
+            term_value = terms[i] if i < len(terms) else ""
+
+            if student_level == "COLLEGE":
+                saved_term = term_value
+            else:
+                saved_term = normalize_term(term_value)
 
             row = {
-                "Student ID": student["Student ID"],
-                "Full Name": student["Full Name"],
-                "Grade Level": student["Grade Level"],
+                "Student ID": student.get("Student ID", ""),
+                "Full Name": student.get("Full Name", ""),
+                "Grade Level": student.get("Grade Level", ""),
 
                 "Section": student.get("Section", ""),
                 "Strand": student.get("Strand", ""),
@@ -860,32 +990,17 @@ def add_grade(student_id):
                 "Sport": student.get("Sport", student.get("Sports Events", "")),
 
                 "Academic Year": academic_year,
-
-                "Term": normalize_term(terms[i]),
+                "Term": saved_term,
 
                 "Subject_Display": subject,
                 "Subject": subject,
-
                 "Subject Section": subject_section
             }
 
-            # =========================
-            # COLLEGE
-            # =========================
-
             if student_level == "COLLEGE":
 
-                midterm = (
-                    midterms[i]
-                    if i < len(midterms)
-                    else ""
-                )
-
-                final = (
-                    finals[i]
-                    if i < len(finals)
-                    else ""
-                )
+                midterm = midterms[i] if i < len(midterms) else ""
+                final = finals[i] if i < len(finals) else ""
 
                 row["Midterm"] = midterm
                 row["Final"] = final
@@ -895,27 +1010,14 @@ def add_grade(student_id):
                 row["Q3"] = ""
                 row["Q4"] = ""
 
+                # Final grade ang basehan ng final term grade at remarks
                 row["Final Term Grade"] = final
-
                 row["Remarks"] = compute_college_remarks(final)
-
-            # =========================
-            # SHS
-            # =========================
 
             elif student_level == "SHS":
 
-                midterm = (
-                    midterms[i]
-                    if i < len(midterms)
-                    else ""
-                )
-
-                final = (
-                    finals[i]
-                    if i < len(finals)
-                    else ""
-                )
+                midterm = midterms[i] if i < len(midterms) else ""
+                final = finals[i] if i < len(finals) else ""
 
                 row["Midterm"] = midterm
                 row["Final"] = final
@@ -925,22 +1027,10 @@ def add_grade(student_id):
                 row["Q3"] = ""
                 row["Q4"] = ""
 
-                avg, remarks = compute_average([
-                    midterm,
-                    final
-                ])
+                avg, remarks = compute_average([midterm, final])
 
                 row["Final Term Grade"] = avg
-
-                row["Remarks"] = (
-                    ""
-                    if remarks == "NO GRADE"
-                    else remarks
-                )
-
-            # =========================
-            # JHS
-            # =========================
+                row["Remarks"] = "" if remarks == "NO GRADE" else remarks
 
             else:
 
@@ -957,20 +1047,10 @@ def add_grade(student_id):
                 row["Midterm"] = ""
                 row["Final"] = ""
 
-                avg, remarks = compute_average([
-                    q1,
-                    q2,
-                    q3,
-                    q4
-                ])
+                avg, remarks = compute_average([q1, q2, q3, q4])
 
                 row["Final Term Grade"] = avg
-
-                row["Remarks"] = (
-                    ""
-                    if remarks == "NO GRADE"
-                    else remarks
-                )
+                row["Remarks"] = "" if remarks == "NO GRADE" else remarks
 
             df = pd.concat(
                 [df, pd.DataFrame([row])],
@@ -979,9 +1059,7 @@ def add_grade(student_id):
 
         save_data(df)
 
-        return redirect(
-            f"/edit_grades/{student_id}"
-        )
+        return redirect(f"/edit_grades/{student_id}")
 
     return render_template(
         "add_grade.html",
@@ -1036,13 +1114,12 @@ def edit_grades(student_id):
                 midterm = request.form.get(f"midterm_{idx}", "")
                 final = request.form.get(f"final_{idx}", "")
 
-                midterm_value = safe_grade(midterm)
-                final_value = safe_grade(final)
+                basis_grade = final if str(final).strip() != "" else midterm
 
-                df.loc[idx, "Midterm"] = midterm_value
-                df.loc[idx, "Final"] = final_value
-                df.loc[idx, "Final Term Grade"] = final_value
-                df.loc[idx, "Remarks"] = compute_college_remarks(final)
+                df.loc[idx, "Midterm"] = midterm
+                df.loc[idx, "Final"] = final
+                df.loc[idx, "Final Term Grade"] = basis_grade
+                df.loc[idx, "Remarks"] = compute_college_remarks(basis_grade)
 
             elif student_level == "SHS":
                 midterm = request.form.get(f"midterm_{idx}", "")
@@ -1134,14 +1211,8 @@ def grades():
             "grades.html",
             matched_students=pd.DataFrame(),
             grouped_records={},
-            show_value=show_value,
-            sports=[],
-            academic_years=[],
-            terms=[],
-            grade_levels=[]
+            show_value=show_value
         )
-
-    df["Term"] = df["Term"].apply(normalize_term)
 
     search = request.args.get("search", "")
     selected_id = request.args.get("student_id", "")
@@ -1163,13 +1234,22 @@ def grades():
 
         for _, row in student_df.iterrows():
             row_dict = row.to_dict()
-
             grade_level = str(row_dict.get("Grade Level", ""))
 
-            row_dict["Type"] = "SHS" if is_shs(grade_level) else "JHS"
+            if is_college(grade_level):
+                row_dict["Type"] = "COLLEGE"
+                term = str(row_dict.get("Term", "")).strip()
+            elif is_shs(grade_level):
+                row_dict["Type"] = "SHS"
+                term = normalize_term(row_dict.get("Term", ""))
+            else:
+                row_dict["Type"] = "JHS"
+                term = normalize_term(row_dict.get("Term", ""))
+
             row_dict["Subject_Display"] = get_subject(row_dict)
 
-            term = normalize_term(row_dict.get("Term", ""))
+            if term == "":
+                term = "No Term"
 
             group_title = (
                 f'{row_dict.get("Full Name", "")} | '
@@ -1183,40 +1263,12 @@ def grades():
 
             grouped_records[group_title].append(row_dict)
 
-    sports = sorted(df["Sports Events"].dropna().astype(str).unique())
-    academic_years = sorted(df["Academic Year"].dropna().astype(str).unique())
-    term_values = df["Term"].dropna().astype(str).apply(normalize_term).unique()
-
-    term_order = ["1st", "2nd", "3rd", "4th"]
-
-    terms = [
-        term for term in term_order
-        if term in term_values
-    ]
-    grade_levels = sorted(df["Grade Level"].dropna().astype(str).unique())
-
     return render_template(
         "grades.html",
         matched_students=matched_students,
         grouped_records=grouped_records,
-        show_value=show_value,
-        sports=sports,
-        academic_years=academic_years,
-        terms=terms,
-        grade_levels=grade_levels
+        show_value=show_value
     )
-
-
-@app.route("/delete_grade/<int:row_index>/<student_id>")
-def delete_grade(row_index, student_id):
-    df = load_data()
-
-    df = df.drop(index=row_index)
-    df.reset_index(drop=True, inplace=True)
-
-    save_data(df)
-
-    return redirect(f"/edit_grades/{student_id}")
 
 
 @app.route("/export_pdf")
@@ -1227,33 +1279,38 @@ def export_pdf():
     if df.empty:
         return "No data available"
 
-    df["Term"] = df["Term"].apply(normalize_term)
+    df = normalize_all_terms(df)
 
     level = request.args.get("level", "ALL").upper()
     sport = request.args.get("sport", "")
-    term = request.args.get("term", "")
+    term = normalize_term(request.args.get("term", ""))
     academic_year = request.args.get("academic_year", "")
     grade_level = request.args.get("grade_level", "")
 
+    if session.get("role") == "admin_college":
+        level = "COLLEGE"
+        grade_level = "College"
+
     if level == "JHS":
-        df = df[~df["Grade Level"].astype(str).str.contains("11|12", na=False)]
-        report_type = "JHS Assessment Report"
-        pdf_columns = "JHS"
+        df = df[df["Grade Level"].astype(str).str.contains("Grade 7|Grade 8|Grade 9|Grade 10", na=False)]
+        report_type = "JHS Grade Report"
 
     elif level == "SHS":
-        df = df[df["Grade Level"].astype(str).str.contains("11|12", na=False)]
-        report_type = "SHS Assessment Report"
-        pdf_columns = "SHS"
+        df = df[df["Grade Level"].astype(str).str.contains("Grade 11|Grade 12", na=False)]
+        report_type = "SHS Grade Report"
+
+    elif level == "COLLEGE":
+        df = df[df["Grade Level"].astype(str).str.contains("College", case=False, na=False)]
+        report_type = "College Grade Report"
 
     else:
-        report_type = "All Students Assessment Report"
-        pdf_columns = "ALL"
+        report_type = "All Students Grade Report"
 
     if sport:
         df = df[df["Sports Events"].astype(str) == sport]
 
     if term:
-        df = df[df["Term"].astype(str) == normalize_term(term)]
+        df = df[df["Term"].astype(str).apply(normalize_term) == term]
 
     if academic_year:
         df = df[df["Academic Year"].astype(str) == academic_year]
@@ -1261,10 +1318,13 @@ def export_pdf():
     if grade_level:
         df = df[df["Grade Level"].astype(str) == grade_level]
 
+    if df.empty:
+        return "No records found for the selected filters"
+
     df["Subject_Display"] = df.apply(lambda row: get_subject(row), axis=1)
 
     df = df.sort_values(
-        by=["Full Name", "Academic Year", "Term", "Subject_Display"],
+        by=["Full Name", "Academic Year", "Term", "Sports Events", "Subject_Display"],
         na_position="last"
     )
 
@@ -1273,148 +1333,128 @@ def export_pdf():
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(legal),
-        rightMargin=8,
-        leftMargin=8,
-        topMargin=8,
-        bottomMargin=8
+        rightMargin=10,
+        leftMargin=10,
+        topMargin=10,
+        bottomMargin=10
     )
 
     styles = getSampleStyleSheet()
 
-    subtitle_style = ParagraphStyle(
-        "SubtitleStyle",
+    title_style = ParagraphStyle(
+        "TitleStyle",
         parent=styles["Heading2"],
-        fontSize=11,
-        leading=12,
+        fontSize=12,
+        leading=14,
         alignment=TA_CENTER,
-        textColor=colors.black,
-        spaceAfter=3
+        spaceAfter=4
     )
 
     small_style = ParagraphStyle(
         "SmallStyle",
         parent=styles["Normal"],
-        fontSize=5.8,
-        leading=6.5,
+        fontSize=6,
+        leading=7,
         alignment=TA_CENTER
+    )
+
+    left_style = ParagraphStyle(
+        "LeftStyle",
+        parent=styles["Normal"],
+        fontSize=6,
+        leading=7,
+        alignment=TA_LEFT
     )
 
     subject_style = ParagraphStyle(
         "SubjectStyle",
         parent=styles["Normal"],
-        fontSize=5.8,
-        leading=6.5,
+        fontSize=6,
+        leading=7,
         alignment=TA_LEFT
     )
+
+    center_style = ParagraphStyle(
+        "CenterStyle",
+        parent=styles["Normal"],
+        fontSize=6,
+        leading=7,
+        alignment=TA_CENTER
+    )
+
+    def remarks_paragraph(value):
+        value = str(value).strip().upper()
+
+        if value in ["PASSED", "PASS"]:
+            return Paragraph('<font color="green"><b>PASSED</b></font>', center_style)
+
+        if value in ["FAILED", "REPEAT", "DROPPED", "DROP"]:
+            return Paragraph(f'<font color="red"><b>{value}</b></font>', center_style)
+
+        if value in ["INC", "INCOMPLETE", "NO GRADE"]:
+            return Paragraph(f'<font color="orange"><b>{value}</b></font>', center_style)
+
+        return Paragraph(f"<b>{value}</b>", center_style)
 
     elements = []
 
     logo_path = "static/nu_logo.png"
-
     if os.path.exists(logo_path):
-        logo = Image(
-            logo_path,
-            width=250,
-            height=55
-        )
-        elements.append(logo)
+        elements.append(Image(logo_path, width=260, height=60))
 
-    elements.append(Spacer(1, 3))
-
-    display_term = normalize_term(term) if term else "All Terms"
-
-    elements.append(
-        Paragraph(
-            f"{display_term.upper()} {report_type.upper()}",
-            subtitle_style
-        )
-    )
-
-    elements.append(
-        Paragraph(
-            f"AY {academic_year if academic_year else 'All Academic Years'}",
-            subtitle_style
-        )
-    )
+    display_ay = academic_year if academic_year else "All Academic Years"
+    display_term = term if term else "All Terms"
+    display_sport = sport if sport else "All Sports"
 
     elements.append(Spacer(1, 4))
+    elements.append(Paragraph(report_type.upper(), title_style))
+    elements.append(
+        Paragraph(
+            f"AY: {display_ay} | Term: {display_term} | Sport: {display_sport}",
+            small_style
+        )
+    )
+    elements.append(Spacer(1, 8))
 
-    if pdf_columns == "SHS":
-        headers = [
-            "Fullname",
-            "Student ID No.",
-            "Grade",
-            "Sports / Events",
-            "AY",
-            "Term",
-            "Subject",
-            "Midterm",
-            "Final",
-            "Final Term Grade",
-            "Status"
-        ]
-        col_widths = [90, 70, 40, 75, 55, 35, 330, 45, 45, 65, 55]
+    headers = [
+        "Student ID",
+        "Full Name",
+        "Level",
+        "Sport",
+        "AY",
+        "Term",
+        "Period",
+        "Subject",
+        "Grade",
+        "Remarks"
+    ]
 
-    elif pdf_columns == "JHS":
-        headers = [
-            "Fullname",
-            "Student ID No.",
-            "Grade",
-            "Sports / Events",
-            "AY",
-            "Term",
-            "Subject",
-            "Q1",
-            "Q2",
-            "Q3",
-            "Q4",
-            "Final Term Grade",
-            "Status"
-        ]
-        col_widths = [85, 65, 40, 75, 50, 35, 310, 35, 35, 35, 35, 65, 55]
-
-    else:
-        headers = [
-            "Fullname",
-            "Student ID No.",
-            "Grade",
-            "Sports / Events",
-            "AY",
-            "Term",
-            "Subject",
-            "Q1",
-            "Q2",
-            "Q3",
-            "Q4",
-            "Midterm",
-            "Final",
-            "Final Term Grade",
-            "Status"
-        ]
-        col_widths = [75, 60, 35, 65, 45, 32, 245, 30, 30, 30, 30, 40, 40, 60, 50]
+    col_widths = [65, 115, 50, 85, 55, 50, 55, 285, 50, 75]
 
     table_data = [headers]
-
-    previous_student_id = None
+    span_ranges = []
+    grouped = {}
 
     for _, row in df.iterrows():
-        subject = get_subject(row)
-        grade_level_value = str(row.get("Grade Level", ""))
+        student_id = str(show_value(row.get("Student ID")))
+        full_name = str(show_value(row.get("Full Name")))
+        level_value = str(show_value(row.get("Grade Level")))
+        sport_value = str(show_value(row.get("Sports Events")))
+        ay_value = str(show_value(row.get("Academic Year")))
         term_value = normalize_term(row.get("Term", ""))
 
-        current_student_id = str(row.get("Student ID", ""))
+        subject = get_subject(row)
 
-        if current_student_id != previous_student_id:
-            display_name = str(show_value(row.get("Full Name")))
-            display_student_id = str(show_value(row.get("Student ID")))
-            display_grade = str(show_value(row.get("Grade Level")))
-            display_sport = str(show_value(row.get("Sports Events")))
-            previous_student_id = current_student_id
-        else:
-            display_name = ""
-            display_student_id = ""
-            display_grade = ""
-            display_sport = ""
+        if subject.strip() == "":
+            continue
+
+        key = (
+            student_id,
+            full_name,
+            level_value,
+            sport_value,
+            ay_value
+        )
 
         q1 = number_or_blank(row.get("Q1"))
         q2 = number_or_blank(row.get("Q2"))
@@ -1423,55 +1463,84 @@ def export_pdf():
         midterm = number_or_blank(row.get("Midterm"))
         final = number_or_blank(row.get("Final"))
 
-        if is_shs(grade_level_value) or is_college(grade_level_value):
-            average, remarks = compute_average([midterm, final])
-        else:
-            average, remarks = compute_average([q1, q2, q3, q4])
+        if is_college(level_value):
+            if str(final).strip() != "":
+                period = "Final"
+                grade_display = final
+            elif str(midterm).strip() != "":
+                period = "Midterm"
+                grade_display = midterm
+            else:
+                period = "No Grade"
+                grade_display = ""
 
-        average_display = average if average != "" else ""
-        remarks_display = remarks
+            remarks_display = compute_college_remarks(grade_display)
 
-        base = [
-            Paragraph(display_name, small_style),
-            display_student_id,
-            display_grade,
-            Paragraph(display_sport, small_style),
-            str(show_value(row.get("Academic Year"))),
-            term_value,
-            Paragraph(subject, subject_style),
-        ]
+            if remarks_display == "":
+                remarks_display = "NO GRADE"
 
-        if pdf_columns == "SHS":
-            row_data = base + [
-                midterm,
-                final,
-                average_display,
-                remarks_display
-            ]
-
-        elif pdf_columns == "JHS":
-            row_data = base + [
-                q1,
-                q2,
-                q3,
-                q4,
-                average_display,
-                remarks_display
-            ]
+        elif is_shs(level_value):
+            period = "Average"
+            grade_display, remarks_display = compute_average([midterm, final])
 
         else:
-            row_data = base + [
-                q1,
-                q2,
-                q3,
-                q4,
-                midterm,
-                final,
-                average_display,
-                remarks_display
-            ]
+            period = "Average"
+            grade_display, remarks_display = compute_average([q1, q2, q3, q4])
 
-        table_data.append(row_data)
+        if key not in grouped:
+            grouped[key] = []
+
+        grouped[key].append({
+            "term": term_value,
+            "period": period,
+            "subject": subject,
+            "grade": grade_display,
+            "remarks": remarks_display
+        })
+
+    for key, subjects in grouped.items():
+        student_id, full_name, level_value, sport_value, ay_value = key
+
+        start_row = len(table_data)
+
+        for i, subject in enumerate(subjects):
+            if i == 0:
+                row_data = [
+                    Paragraph(student_id, center_style),
+                    Paragraph(full_name, left_style),
+                    Paragraph(level_value, center_style),
+                    Paragraph(sport_value, center_style),
+                    Paragraph(ay_value, center_style),
+                    Paragraph(subject["term"], center_style),
+                    Paragraph(subject["period"], center_style),
+                    Paragraph(subject["subject"], subject_style),
+                    Paragraph(str(subject["grade"]), center_style),
+                    remarks_paragraph(subject["remarks"])
+                ]
+            else:
+                row_data = [
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    Paragraph(subject["term"], center_style),
+                    Paragraph(subject["period"], center_style),
+                    Paragraph(subject["subject"], subject_style),
+                    Paragraph(str(subject["grade"]), center_style),
+                    remarks_paragraph(subject["remarks"])
+                ]
+
+            table_data.append(row_data)
+
+        end_row = len(table_data) - 1
+
+        if end_row > start_row:
+            for col in range(0, 5):
+                span_ranges.append((col, start_row, end_row))
+
+    if len(table_data) == 1:
+        return "No grade records found for the selected filters"
 
     table = Table(
         table_data,
@@ -1479,80 +1548,31 @@ def export_pdf():
         colWidths=col_widths
     )
 
-    table_style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+    report_table_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2f63b7")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 5.2),
-
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("ALIGN", (0, 1), (0, -1), "LEFT"),
-        ("ALIGN", (3, 1), (3, -1), "LEFT"),
-        ("ALIGN", (6, 1), (6, -1), "LEFT"),
-
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("FONTSIZE", (0, 0), (-1, 0), 6),
+        ("FONTSIZE", (0, 1), (-1, -1), 5.8),
         ("GRID", (0, 0), (-1, -1), 0.35, colors.black),
-
-        ("TOPPADDING", (0, 0), (-1, 0), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
-        ("TOPPADDING", (0, 1), (-1, -1), 1.3),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 1.3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 2),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("ALIGN", (1, 1), (1, -1), "LEFT"),
+        ("ALIGN", (7, 1), (7, -1), "LEFT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ])
 
-    remarks_col = len(headers) - 1
+    for col, start_row, end_row in span_ranges:
+        report_table_style.add("SPAN", (col, start_row), (col, end_row))
+        report_table_style.add("VALIGN", (col, start_row), (col, end_row), "MIDDLE")
 
-    for row_index in range(1, len(table_data)):
-        remark = str(table_data[row_index][remarks_col]).upper().strip()
-
-        if remark in ["PASSED", "PASS"]:
-            table_style.add(
-                "TEXTCOLOR",
-                (remarks_col, row_index),
-                (remarks_col, row_index),
-                colors.green
-            )
-            table_style.add(
-                "FONTNAME",
-                (remarks_col, row_index),
-                (remarks_col, row_index),
-                "Helvetica-Bold"
-            )
-
-        elif remark == "FAILED":
-            table_style.add(
-                "TEXTCOLOR",
-                (remarks_col, row_index),
-                (remarks_col, row_index),
-                colors.red
-            )
-            table_style.add(
-                "FONTNAME",
-                (remarks_col, row_index),
-                (remarks_col, row_index),
-                "Helvetica-Bold"
-            )
-
-        elif remark == "NO GRADE":
-            table_style.add(
-                "TEXTCOLOR",
-                (remarks_col, row_index),
-                (remarks_col, row_index),
-                colors.orange
-            )
-            table_style.add(
-                "FONTNAME",
-                (remarks_col, row_index),
-                (remarks_col, row_index),
-                "Helvetica-Bold"
-            )
-
-    table.setStyle(table_style)
+    table.setStyle(report_table_style)
 
     elements.append(table)
-
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 25))
 
     signature_data = [[
         Paragraph(
@@ -1562,7 +1582,6 @@ def export_pdf():
             f"{session.get('position', '')}",
             small_style
         ),
-
         Paragraph(
             "<b>Reviewed By:</b><br/><br/>"
             "______________________________<br/>"
@@ -1572,11 +1591,7 @@ def export_pdf():
         )
     ]]
 
-    signature_table = Table(
-        signature_data,
-        colWidths=[420, 420]
-    )
-
+    signature_table = Table(signature_data, colWidths=[440, 440])
     signature_table.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (0, 0), (0, 0), "LEFT"),
@@ -1592,7 +1607,9 @@ def export_pdf():
 
     response = make_response(pdf)
     response.headers["Content-Type"] = "application/pdf"
-    response.headers["Content-Disposition"] = "attachment; filename=grades_report.pdf"
+    response.headers["Content-Disposition"] = (
+        "attachment; filename=grades_report.pdf"
+    )
 
     return response
 
@@ -1601,100 +1618,172 @@ def intervention_report():
     df = load_data()
     df = filter_data_by_role(df)
 
-    report_type = request.args.get("type", "remedial")
+    if df.empty:
+        return "No data available"
 
+    df = normalize_all_terms(df)
+
+    report_type = request.args.get("type", "remedial")
     level = request.args.get("level", "ALL").upper()
     sport = request.args.get("sport", "")
-    term = request.args.get("term", "")
+    term = normalize_term(request.args.get("term", ""))
     academic_year = request.args.get("academic_year", "")
     grade_level_filter = request.args.get("grade_level", "")
 
-    rows = []
-
-    df["Term"] = df["Term"].apply(normalize_term)
-
     if level == "JHS":
         df = df[
-            ~df["Grade Level"].astype(str).str.contains("11|12", na=False)
+            df["Grade Level"].astype(str).str.contains(
+                "Grade 7|Grade 8|Grade 9|Grade 10",
+                na=False
+            )
         ]
 
     elif level == "SHS":
         df = df[
-            df["Grade Level"].astype(str).str.contains("11|12", na=False)
+            df["Grade Level"].astype(str).str.contains(
+                "Grade 11|Grade 12",
+                na=False
+            )
+        ]
+
+    elif level == "COLLEGE":
+        df = df[
+            df["Grade Level"].astype(str).str.contains(
+                "College",
+                case=False,
+                na=False
+            )
         ]
 
     if sport:
-        df = df[
-            df["Sports Events"].astype(str) == sport
-        ]
+        df = df[df["Sports Events"].astype(str) == sport]
 
     if term:
         df = df[
-            df["Term"].astype(str) == normalize_term(term)
+            df["Term"].astype(str).apply(normalize_term) == term
         ]
 
     if academic_year:
-        df = df[
-            df["Academic Year"].astype(str) == academic_year
-        ]
+        df = df[df["Academic Year"].astype(str) == academic_year]
 
     if grade_level_filter:
-        df = df[
-            df["Grade Level"].astype(str) == grade_level_filter
-        ]
+        df = df[df["Grade Level"].astype(str) == grade_level_filter]
+
+    if df.empty:
+        return "No records found for the selected filters"
+
+    df["Subject_Display"] = df.apply(lambda row: get_subject(row), axis=1)
+
+    df = df.sort_values(
+        by=["Full Name", "Academic Year", "Term", "Sports Events", "Subject_Display"],
+        na_position="last"
+    )
+
+    grouped = {}
 
     for _, row in df.iterrows():
-
         grade_level = str(row.get("Grade Level", ""))
+        subject = get_subject(row)
+
+        if subject.strip() == "":
+            continue
 
         q1 = number_or_blank(row.get("Q1"))
         q2 = number_or_blank(row.get("Q2"))
         q3 = number_or_blank(row.get("Q3"))
         q4 = number_or_blank(row.get("Q4"))
-
         midterm = number_or_blank(row.get("Midterm"))
         final = number_or_blank(row.get("Final"))
 
-        if is_shs(grade_level):
-            average, _ = compute_average([midterm, final])
+        period = ""
+        grade_display = ""
+        status = ""
+
+        if is_college(grade_level):
+            if str(final).strip() != "":
+                period = "Final"
+                grade_display = final
+            elif str(midterm).strip() != "":
+                period = "Midterm"
+                grade_display = midterm
+            else:
+                continue
+
+            status = compute_college_remarks(grade_display)
+
+            if report_type == "remedial":
+                continue
+
+            if status not in ["FAILED", "REPEAT", "INCOMPLETE", "DROPPED"]:
+                continue
+
+            intervention_status = status
+
         else:
-            average, _ = compute_average([q1, q2, q3, q4])
+            period = "Average"
 
-        if average == "":
-            continue
+            if is_shs(grade_level):
+                average, _ = compute_average([midterm, final])
+            else:
+                average, _ = compute_average([q1, q2, q3, q4])
 
-        average = int(average)
-
-        if report_type == "remedial":
-            if not (71 <= average <= 74):
+            if average == "":
                 continue
 
-        elif report_type == "load_revision":
-            if not (average <= 70):
+            grade_num = float(average)
+            grade_display = int(round(grade_num))
+
+            if report_type == "remedial":
+                if not (71 <= grade_num <= 74):
+                    continue
+                intervention_status = "REMEDIAL"
+
+            elif report_type == "load_revision":
+                if not (grade_num <= 70):
+                    continue
+                intervention_status = "LOAD REVISION"
+
+            else:
                 continue
 
-        rows.append([
-            str(show_value(row.get("Student ID"))),
-            str(show_value(row.get("Full Name"))),
-            str(show_value(row.get("Grade Level"))),
-            str(show_value(row.get("Sports Events"))),
-            str(show_value(row.get("Academic Year"))),
-            str(normalize_term(row.get("Term"))),
-            str(get_subject(row)),
-            str(average),
-            "REMEDIAL" if report_type == "remedial" else "LOAD REVISION"
-        ])
+        student_id = str(show_value(row.get("Student ID")))
+        full_name = str(show_value(row.get("Full Name")))
+        level_value = str(show_value(row.get("Grade Level")))
+        sport_value = str(show_value(row.get("Sports Events")))
+        ay_value = str(show_value(row.get("Academic Year")))
+
+        key = (
+            student_id,
+            full_name,
+            level_value,
+            sport_value,
+            ay_value
+        )
+
+        if key not in grouped:
+            grouped[key] = []
+
+        grouped[key].append({
+            "term": normalize_term(row.get("Term", "")),
+            "period": period,
+            "subject": subject,
+            "grade": grade_display,
+            "remarks": intervention_status
+        })
+
+    if not grouped:
+        return "No intervention records found for the selected filters"
 
     title = (
         "Remedial Report"
         if report_type == "remedial"
-        else "Load Revision Report"
+        else "Load Revision / Deficiency Report"
     )
 
     filename = (
         "remedial_report.pdf"
         if report_type == "remedial"
-        else "load_revision_report.pdf"
+        else "load_revision_deficiency_report.pdf"
     )
 
     buffer = BytesIO()
@@ -1702,157 +1791,208 @@ def intervention_report():
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(legal),
-        rightMargin=15,
-        leftMargin=15,
-        topMargin=20,
-        bottomMargin=20
+        rightMargin=10,
+        leftMargin=10,
+        topMargin=10,
+        bottomMargin=10
     )
 
     styles = getSampleStyleSheet()
 
-    elements = []
+    title_style = ParagraphStyle(
+        "TitleStyle",
+        parent=styles["Heading2"],
+        fontSize=12,
+        leading=14,
+        alignment=TA_CENTER,
+        spaceAfter=4
+    )
 
-    # =========================
-    # LOGO
-    # =========================
+    small_style = ParagraphStyle(
+        "SmallStyle",
+        parent=styles["Normal"],
+        fontSize=6,
+        leading=7,
+        alignment=TA_CENTER
+    )
+
+    left_style = ParagraphStyle(
+        "LeftStyle",
+        parent=styles["Normal"],
+        fontSize=6,
+        leading=7,
+        alignment=TA_LEFT
+    )
+
+    subject_style = ParagraphStyle(
+        "SubjectStyle",
+        parent=styles["Normal"],
+        fontSize=6,
+        leading=7,
+        alignment=TA_LEFT
+    )
+
+    center_style = ParagraphStyle(
+        "CenterStyle",
+        parent=styles["Normal"],
+        fontSize=6,
+        leading=7,
+        alignment=TA_CENTER
+    )
+
+    elements = []
 
     logo_path = "static/nu_logo.png"
 
     if os.path.exists(logo_path):
-
-        logo = Image(
-            logo_path,
-            width=420,
-            height=95
-        )
-
+        logo = Image(logo_path, width=260, height=60)
         elements.append(logo)
 
-    elements.append(Spacer(1, 10))
+    display_ay = academic_year if academic_year else "All Academic Years"
+    display_term = term if term else "All Terms"
+    display_sport = sport if sport else "All Sports"
 
-    # =========================
-    # TITLE
-    # =========================
-
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(title.upper(), title_style))
     elements.append(
         Paragraph(
-            title,
-            styles["Heading2"]
+            f"AY: {display_ay} | Term: {display_term} | Sport: {display_sport}",
+            small_style
         )
     )
+    elements.append(Spacer(1, 8))
 
-    elements.append(Spacer(1, 12))
-
-    # =========================
-    # TABLE
-    # =========================
-
-    data = [[
+    headers = [
         "Student ID",
         "Full Name",
-        "Grade Level",
+        "Level",
         "Sport",
-        "Academic Year",
+        "AY",
         "Term",
+        "Period",
         "Subject",
-        "Final Grade",
-        "Status"
-    ]]
+        "Grade",
+        "Remarks"
+    ]
 
-    data.extend(rows)
+    col_widths = [65, 115, 50, 85, 55, 50, 55, 285, 50, 75]
+
+    table_data = [headers]
+    span_ranges = []
+
+    for key, subjects in grouped.items():
+        student_id, full_name, level_value, sport_value, ay_value = key
+
+        start_row = len(table_data)
+
+        for i, subject in enumerate(subjects):
+            if i == 0:
+                row_data = [
+                    Paragraph(student_id, center_style),
+                    Paragraph(full_name, left_style),
+                    Paragraph(level_value, center_style),
+                    Paragraph(sport_value, center_style),
+                    Paragraph(ay_value, center_style),
+                    Paragraph(subject["term"], center_style),
+                    Paragraph(subject["period"], center_style),
+                    Paragraph(subject["subject"], subject_style),
+                    Paragraph(str(subject["grade"]), center_style),
+                    Paragraph(str(subject["remarks"]), center_style)
+                ]
+            else:
+                row_data = [
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    Paragraph(subject["term"], center_style),
+                    Paragraph(subject["period"], center_style),
+                    Paragraph(subject["subject"], subject_style),
+                    Paragraph(str(subject["grade"]), center_style),
+                    Paragraph(str(subject["remarks"]), center_style)
+                ]
+
+            table_data.append(row_data)
+
+        end_row = len(table_data) - 1
+
+        if end_row > start_row:
+            for col in range(0, 5):
+                span_ranges.append((col, start_row, end_row))
 
     table = Table(
-        data,
+        table_data,
         repeatRows=1,
-        colWidths=[70, 140, 70, 100, 80, 60, 260, 80, 100]
+        colWidths=col_widths
     )
 
     table_style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2f63b7")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-
+        ("FONTSIZE", (0, 0), (-1, 0), 6),
+        ("FONTSIZE", (0, 1), (-1, -1), 5.8),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.black),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("ALIGN", (1, 1), (1, -1), "LEFT"),
-        ("ALIGN", (6, 1), (6, -1), "LEFT"),
-
-        ("GRID", (0, 0), (-1, -1), 0.45, colors.black),
+        ("ALIGN", (7, 1), (7, -1), "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ])
 
-    status_col = 8
+    for col, start_row, end_row in span_ranges:
+        table_style.add("SPAN", (col, start_row), (col, end_row))
+        table_style.add("VALIGN", (col, start_row), (col, end_row), "MIDDLE")
 
-    for row_index in range(1, len(data)):
+    remarks_col = 9
 
-        if report_type == "remedial":
+    for row_index in range(1, len(table_data)):
+        remark_cell = table_data[row_index][remarks_col]
 
-            table_style.add(
-                "TEXTCOLOR",
-                (status_col, row_index),
-                (status_col, row_index),
-                colors.orange
-            )
+        try:
+            remark = str(remark_cell.text).upper().strip()
+        except:
+            remark = str(remark_cell).upper().strip()
 
-        else:
+        if remark in ["REMEDIAL", "INCOMPLETE", "NO GRADE"]:
+            table_style.add("TEXTCOLOR", (remarks_col, row_index), (remarks_col, row_index), colors.orange)
 
-            table_style.add(
-                "TEXTCOLOR",
-                (status_col, row_index),
-                (status_col, row_index),
-                colors.red
-            )
+        elif remark in ["LOAD REVISION", "FAILED", "REPEAT", "DROPPED", "DROP"]:
+            table_style.add("TEXTCOLOR", (remarks_col, row_index), (remarks_col, row_index), colors.red)
 
-        table_style.add(
-            "FONTNAME",
-            (status_col, row_index),
-            (status_col, row_index),
-            "Helvetica-Bold"
-        )
+        table_style.add("FONTNAME", (remarks_col, row_index), (remarks_col, row_index), "Helvetica-Bold")
 
     table.setStyle(table_style)
 
     elements.append(table)
-
-    # =========================
-    # SIGNATURES
-    # =========================
-
-    elements.append(Spacer(1, 40))
+    elements.append(Spacer(1, 25))
 
     signature_data = [[
+        Paragraph(
+            "<b>Prepared By:</b><br/><br/>"
+            "______________________________<br/>"
+            f"{session.get('fullname', '')}<br/>"
+            f"{session.get('position', '')}",
+            small_style
+        ),
+        Paragraph(
+            "<b>Reviewed By:</b><br/><br/>"
+            "______________________________<br/>"
+            "Ms. Maria Ester V. Suarez<br/>"
+            "Assistant Director, AADO",
+            small_style
+        )
+    ]]
 
-    Paragraph(
-        "<b>Prepared By:</b><br/><br/><br/><br/>"
-        "______________________________<br/>"
-        f"{session.get('fullname', '')}<br/>"
-        f"{session.get('position', '')}",
-        styles["Normal"]
-    ),
-
-    Paragraph(
-        "<b>Reviewed By:</b><br/><br/><br/><br/>"
-        "______________________________<br/>"
-        "Ms. Maria Ester V. Suarez<br/>"
-        "Assistant Director, AADO",
-        styles["Normal"]
-    )
-
-]]
-
-    signature_table = Table(
-        signature_data,
-        colWidths=[420, 420]
-    )
-
+    signature_table = Table(signature_data, colWidths=[440, 440])
     signature_table.setStyle(TableStyle([
-
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-
         ("ALIGN", (0, 0), (0, 0), "LEFT"),
-
         ("ALIGN", (1, 0), (1, 0), "RIGHT"),
-
     ]))
 
     elements.append(signature_table)
@@ -1860,13 +2000,10 @@ def intervention_report():
     doc.build(elements)
 
     pdf = buffer.getvalue()
-
     buffer.close()
 
     response = make_response(pdf)
-
     response.headers["Content-Type"] = "application/pdf"
-
     response.headers["Content-Disposition"] = (
         f"attachment; filename={filename}"
     )
@@ -1896,22 +2033,61 @@ def monitoring_form_filter(student_id):
         .unique()
     )
 
-    terms = sorted(
-        student_records["Term"]
-        .dropna()
-        .astype(str)
-        .apply(normalize_term)
-        .unique()
-    )
-
+    # ==========================
+    # COLLEGE
+    # ==========================
     if is_college(grade_level):
-        periods = ["Average", "Final"]
 
+        terms = [
+            "Term 1",
+            "Term 2",
+            "Term 3"
+        ]
+
+        periods = [
+            "Midterm",
+            "Final"
+        ]
+
+    # ==========================
+    # SHS
+    # ==========================
     elif is_shs(grade_level):
-        periods = ["Average", "Midterm", "Final"]
 
+        terms = sorted(
+            student_records["Term"]
+            .dropna()
+            .astype(str)
+            .apply(normalize_term)
+            .unique()
+        )
+
+        periods = [
+            "Average",
+            "Midterm",
+            "Final"
+        ]
+
+    # ==========================
+    # JHS
+    # ==========================
     else:
-        periods = ["Average", "Q1", "Q2", "Q3", "Q4"]
+
+        terms = sorted(
+            student_records["Term"]
+            .dropna()
+            .astype(str)
+            .apply(normalize_term)
+            .unique()
+        )
+
+        periods = [
+            "Average",
+            "Q1",
+            "Q2",
+            "Q3",
+            "Q4"
+        ]
 
     return render_template(
         "monitoring_form_filter.html",
@@ -2434,6 +2610,265 @@ def academic_monitoring_form(student_id):
 
     return response
 
+
+@app.route("/college_deficiency_report")
+def college_deficiency_report():
+    df = load_data()
+    df = filter_data_by_role(df)
+
+    if df.empty:
+        return "No data available"
+
+    df = df[
+        df["Grade Level"]
+        .astype(str)
+        .str.contains("College", case=False, na=False)
+    ]
+
+    if df.empty:
+        return "No college records available"
+
+    academic_year = request.args.get("academic_year", "")
+    term = request.args.get("term", "")
+    sport = request.args.get("sport", "")
+
+    if academic_year:
+        df = df[df["Academic Year"].astype(str) == academic_year]
+
+    if term:
+        df = df[df["Term"].astype(str) == term]
+
+    if sport:
+        df = df[df["Sports Events"].astype(str) == sport]
+
+    deficiency_rows = []
+
+    for _, row in df.iterrows():
+        final_grade = str(row.get("Final", "")).strip().upper()
+
+        status = ""
+
+        if final_grade in ["5", "5.0", "5.00", "0", "0.0", "0.00"]:
+            status = "FAILED"
+        elif final_grade == "INC":
+            status = "INCOMPLETE"
+        elif final_grade == "R":
+            status = "REPEAT"
+        elif final_grade == "DROP":
+            status = "DROPPED"
+
+        if status:
+            deficiency_rows.append([
+                str(show_value(row.get("Student ID"))),
+                str(show_value(row.get("Full Name"))),
+                str(show_value(row.get("Course / Program"))),
+                str(show_value(row.get("Year Level"))),
+                str(show_value(row.get("Sports Events"))),
+                str(show_value(row.get("Academic Year"))),
+                str(show_value(row.get("Term"))),
+                str(get_subject(row)),
+                str(show_value(row.get("Midterm"))),
+                str(show_value(row.get("Final"))),
+                status
+            ])
+
+    deficiency_rows = sorted(
+        deficiency_rows,
+        key=lambda x: (
+            x[1].lower(),
+            x[5],
+            x[6],
+            x[7].lower()
+        )
+    )
+
+    total_failed = sum(1 for r in deficiency_rows if r[10] == "FAILED")
+    total_inc = sum(1 for r in deficiency_rows if r[10] == "INCOMPLETE")
+    total_repeat = sum(1 for r in deficiency_rows if r[10] == "REPEAT")
+    total_drop = sum(1 for r in deficiency_rows if r[10] == "DROPPED")
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(legal),
+        rightMargin=10,
+        leftMargin=10,
+        topMargin=10,
+        bottomMargin=10
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "TitleStyle",
+        parent=styles["Heading2"],
+        fontSize=12,
+        leading=14,
+        alignment=TA_CENTER,
+        spaceAfter=6
+    )
+
+    normal_style = ParagraphStyle(
+        "NormalSmall",
+        parent=styles["Normal"],
+        fontSize=7,
+        leading=8
+    )
+
+    table_style_text = ParagraphStyle(
+        "TableText",
+        parent=styles["Normal"],
+        fontSize=5.8,
+        leading=6.5,
+        alignment=TA_LEFT
+    )
+
+    table_center_text = ParagraphStyle(
+        "TableCenterText",
+        parent=styles["Normal"],
+        fontSize=5.8,
+        leading=6.5,
+        alignment=TA_CENTER
+    )
+
+    elements = []
+
+    logo_path = "static/nu_logo.png"
+
+    if os.path.exists(logo_path):
+        logo = Image(logo_path, width=260, height=60)
+        elements.append(logo)
+
+    elements.append(Spacer(1, 5))
+
+    elements.append(
+        Paragraph(
+            "COLLEGE ACADEMIC DEFICIENCY REPORT",
+            title_style
+        )
+    )
+
+    summary = f"""
+    <b>Total Deficiency Records:</b> {len(deficiency_rows)}<br/>
+    <b>Failed:</b> {total_failed} &nbsp;&nbsp;
+    <b>INC:</b> {total_inc} &nbsp;&nbsp;
+    <b>Repeat:</b> {total_repeat} &nbsp;&nbsp;
+    <b>Dropped:</b> {total_drop}
+    """
+
+    elements.append(Paragraph(summary, normal_style))
+    elements.append(Spacer(1, 8))
+
+    data = [[
+        "Student ID",
+        "Full Name",
+        "Course",
+        "Year",
+        "Sport",
+        "AY",
+        "Term",
+        "Subject",
+        "Midterm",
+        "Final",
+        "Status"
+    ]]
+
+    for r in deficiency_rows:
+        data.append([
+            Paragraph(r[0], table_center_text),
+            Paragraph(r[1], table_style_text),
+            Paragraph(r[2], table_style_text),
+            Paragraph(r[3], table_center_text),
+            Paragraph(r[4], table_style_text),
+            Paragraph(r[5], table_center_text),
+            Paragraph(r[6], table_center_text),
+            Paragraph(r[7], table_style_text),
+            Paragraph(r[8], table_center_text),
+            Paragraph(r[9], table_center_text),
+            Paragraph(r[10], table_center_text),
+        ])
+
+    table = Table(
+        data,
+        repeatRows=1,
+        colWidths=[58, 105, 125, 45, 85, 58, 48, 210, 48, 45, 70]
+    )
+
+    table_style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, 0), 6),
+        ("FONTSIZE", (0, 1), (-1, -1), 5.8),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.black),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+    ])
+
+    status_col = 10
+
+    for i in range(1, len(data)):
+        status = deficiency_rows[i - 1][10].upper()
+
+        if status == "FAILED":
+            table_style.add("TEXTCOLOR", (status_col, i), (status_col, i), colors.red)
+        elif status == "INCOMPLETE":
+            table_style.add("TEXTCOLOR", (status_col, i), (status_col, i), colors.orange)
+        elif status == "REPEAT":
+            table_style.add("TEXTCOLOR", (status_col, i), (status_col, i), colors.purple)
+        elif status == "DROPPED":
+            table_style.add("TEXTCOLOR", (status_col, i), (status_col, i), colors.red)
+
+        table_style.add("FONTNAME", (status_col, i), (status_col, i), "Helvetica-Bold")
+
+    table.setStyle(table_style)
+    elements.append(table)
+
+    elements.append(Spacer(1, 25))
+
+    signature_data = [[
+        Paragraph(
+            "<b>Prepared By:</b><br/><br/>"
+            "______________________________<br/>"
+            f"{session.get('fullname', '')}<br/>"
+            f"{session.get('position', '')}",
+            normal_style
+        ),
+        Paragraph(
+            "<b>Reviewed By:</b><br/><br/>"
+            "______________________________<br/>"
+            "Ms. Maria Ester V. Suarez<br/>"
+            "Assistant Director, AADO",
+            normal_style
+        )
+    ]]
+
+    signature_table = Table(signature_data, colWidths=[440, 440])
+    signature_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ALIGN", (0, 0), (0, 0), "LEFT"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+    ]))
+
+    elements.append(signature_table)
+
+    doc.build(elements)
+
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = make_response(pdf)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = (
+        "attachment; filename=college_deficiency_report.pdf"
+    )
+
+    return response
+
 @app.route("/reports")
 def reports():
 
@@ -2455,38 +2890,35 @@ def reports():
             total_college=0
         )
 
-    sports = sorted(
-        df["Sports Events"]
-        .dropna()
-        .astype(str)
-        .unique()
-    )
+    df["Term"] = df["Term"].apply(normalize_term)
+
+    role = session.get("role")
+
+    if role == "admin_college":
+        sports = get_sports_by_group("college")
+    elif role == "admin_jhs_shs":
+        sports = get_sports_by_group("basic_ed")
+    else:
+        sports = get_sports_by_group("basic_ed") + get_sports_by_group("college")
+
+    sports = sorted(list(set(sports)))
 
     jhs_df = df[
-        df["Grade Level"]
-        .astype(str)
-        .str.contains("Grade 7|Grade 8|Grade 9|Grade 10", na=False)
+        df["Grade Level"].astype(str).str.contains(
+            "Grade 7|Grade 8|Grade 9|Grade 10",
+            na=False
+        )
     ]
-
-    jhs_sports = sorted(
-        jhs_df["Sports Events"]
-        .dropna()
-        .astype(str)
-        .unique()
-    )
 
     shs_df = df[
-        df["Grade Level"]
-        .astype(str)
-        .str.contains("Grade 11|Grade 12", na=False)
+        df["Grade Level"].astype(str).str.contains(
+            "Grade 11|Grade 12",
+            na=False
+        )
     ]
 
-    shs_sports = sorted(
-        shs_df["Sports Events"]
-        .dropna()
-        .astype(str)
-        .unique()
-    )
+    jhs_sports = sorted(list(set(get_sports_by_group("basic_ed"))))
+    shs_sports = sorted(list(set(get_sports_by_group("basic_ed"))))
 
     academic_years = sorted(
         df["Academic Year"]
@@ -2503,7 +2935,12 @@ def reports():
         .unique()
     )
 
-    term_order = ["1st", "2nd", "3rd", "4th"]
+    term_order = [
+        "1ST",
+        "2ND",
+        "3RD TERM",
+        "4TH"
+    ]
 
     terms = [
         term for term in term_order
@@ -2617,18 +3054,22 @@ def edit_student(student_id):
 @app.route("/add_student", methods=["GET", "POST"])
 def add_student():
     df = load_data()
+    role = session.get("role")
 
     if request.method == "POST":
-        student_id = request.form.get("student_id")
-        full_name = request.form.get("full_name")
-        grade_level = request.form.get("grade_level")
-        section = request.form.get("section")
-        strand = request.form.get("strand")
-        year_level = request.form.get("year_level")
-        course_program = request.form.get("course_program")
-        college_department = request.form.get("college_department")
-        sport = request.form.get("sport")
-        academic_year = request.form.get("academic_year")
+        student_id = request.form.get("student_id", "")
+        full_name = request.form.get("full_name", "")
+        grade_level = request.form.get("grade_level", "")
+        section = request.form.get("section", "")
+        strand = request.form.get("strand", "")
+        year_level = request.form.get("year_level", "")
+        course_program = request.form.get("course_program", "")
+        college_department = request.form.get("college_department", "")
+        sport = request.form.get("sport", "")
+        academic_year = request.form.get("academic_year", "")
+
+        if role == "admin_college":
+            grade_level = "College"
 
         new_student = {
             "Student ID": student_id,
@@ -2636,9 +3077,6 @@ def add_student():
             "Grade Level": grade_level,
             "Section": section,
             "Strand": strand,
-            "Year Level": year_level,
-            "Course / Program": course_program,
-            "College": college_department,
             "Year Level": year_level,
             "Course / Program": course_program,
             "College": college_department,
@@ -2659,19 +3097,21 @@ def add_student():
         }
 
         df = pd.concat([df, pd.DataFrame([new_student])], ignore_index=True)
-
         save_data(df)
 
         return redirect("/student_list")
 
     basic_ed_sports = get_sports_by_group("basic_ed")
     college_sports = get_sports_by_group("college")
+    programs = get_programs_for_dropdown()
 
     return render_template(
         "add_student.html",
         basic_ed_sports=basic_ed_sports,
-        college_sports=college_sports
+        college_sports=college_sports,
+        programs=programs
     )
+
 
 @app.route("/promote_students", methods=["GET", "POST"])
 def promote_students():
@@ -2781,8 +3221,191 @@ def delete_sport(sport_id):
 
     return redirect("/manage_sports")
 
+def init_colleges_courses_tables():
+
+    with engine.begin() as conn:
+
+        conn.exec_driver_sql("""
+            CREATE TABLE IF NOT EXISTS colleges (
+                id SERIAL PRIMARY KEY,
+                college_name TEXT UNIQUE NOT NULL
+            )
+        """)
+
+        conn.exec_driver_sql("""
+            CREATE TABLE IF NOT EXISTS courses (
+                id SERIAL PRIMARY KEY,
+                course_name TEXT UNIQUE NOT NULL,
+                college_id INTEGER REFERENCES colleges(id)
+            )
+        """)
+
+def init_departments_programs_tables():
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql("""
+            CREATE TABLE IF NOT EXISTS departments (
+                id SERIAL PRIMARY KEY,
+                department_name TEXT UNIQUE NOT NULL
+            )
+        """)
+
+        conn.exec_driver_sql("""
+            CREATE TABLE IF NOT EXISTS programs (
+                id SERIAL PRIMARY KEY,
+                program_name TEXT UNIQUE NOT NULL,
+                department_id INTEGER REFERENCES departments(id) ON DELETE CASCADE
+            )
+        """)
+
+
+def get_departments():
+    with engine.begin() as conn:
+        rows = conn.exec_driver_sql("""
+            SELECT id, department_name
+            FROM departments
+            ORDER BY department_name
+        """).fetchall()
+
+    return rows
+
+
+def get_programs():
+    with engine.begin() as conn:
+        rows = conn.exec_driver_sql("""
+            SELECT 
+                programs.id,
+                programs.program_name,
+                departments.department_name
+            FROM programs
+            JOIN departments ON programs.department_id = departments.id
+            ORDER BY departments.department_name, programs.program_name
+        """).fetchall()
+
+    return rows
+
+
+def get_programs_for_dropdown():
+    with engine.begin() as conn:
+        rows = conn.exec_driver_sql("""
+            SELECT 
+                programs.program_name,
+                departments.department_name
+            FROM programs
+            JOIN departments ON programs.department_id = departments.id
+            ORDER BY programs.program_name
+        """).fetchall()
+
+    return [
+        {
+            "program_name": row[0],
+            "department_name": row[1]
+        }
+        for row in rows
+    ]
+
+
+@app.route("/manage_departments", methods=["GET", "POST"])
+def manage_departments():
+
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    if request.method == "POST":
+        department_name = request.form.get("department_name", "").strip()
+
+        if department_name:
+            try:
+                with engine.begin() as conn:
+                    conn.exec_driver_sql(
+                        """
+                        INSERT INTO departments (department_name)
+                        VALUES (%s)
+                        """,
+                        (department_name,)
+                    )
+            except Exception as e:
+                print("ADD DEPARTMENT ERROR:", e)
+
+        return redirect("/manage_departments")
+
+    departments = get_departments()
+
+    return render_template(
+        "manage_departments.html",
+        departments=departments
+    )
+
+
+@app.route("/delete_department/<int:department_id>")
+def delete_department(department_id):
+
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "DELETE FROM departments WHERE id = %s",
+            (department_id,)
+        )
+
+    return redirect("/manage_departments")
+
+
+@app.route("/manage_programs", methods=["GET", "POST"])
+def manage_programs():
+
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    if request.method == "POST":
+        program_name = request.form.get("program_name", "").strip()
+        department_id = request.form.get("department_id", "").strip()
+
+        if program_name and department_id:
+            try:
+                with engine.begin() as conn:
+                    conn.exec_driver_sql(
+                        """
+                        INSERT INTO programs (program_name, department_id)
+                        VALUES (%s, %s)
+                        """,
+                        (program_name, department_id)
+                    )
+            except Exception as e:
+                print("ADD PROGRAM ERROR:", e)
+
+        return redirect("/manage_programs")
+
+    departments = get_departments()
+    programs = get_programs()
+
+    return render_template(
+        "manage_programs.html",
+        departments=departments,
+        programs=programs
+    )
+
+
+@app.route("/delete_program/<int:program_id>")
+def delete_program(program_id):
+
+    if session.get("role") != "super_admin":
+        return redirect("/")
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "DELETE FROM programs WHERE id = %s",
+            (program_id,)
+        )
+
+    return redirect("/manage_programs")
+
+
 init_users_table()
 init_sports_table()
+init_colleges_courses_tables()
+init_departments_programs_tables()
 
 @app.route("/print_students")
 def print_students():
@@ -2822,6 +3445,135 @@ def print_students():
         grade_level=grade_level,
         sport=sport
     )
+
+@app.route("/failed_students")
+def failed_students():
+    df = load_data()
+    df = filter_data_by_role(df)
+
+    if df.empty:
+        return render_template(
+            "failed_students.html",
+            grouped_records={},
+            show_value=show_value
+        )
+
+    df["Term"] = df["Term"].apply(normalize_term)
+
+    failed_records = []
+
+    for _, row in df.iterrows():
+        grade_level = str(row.get("Grade Level", ""))
+        student_id = str(row.get("Student ID", "")).strip()
+
+        if student_id == "":
+            continue
+
+        subject = get_subject(row)
+        if subject.strip() == "":
+            continue
+
+        is_failed = False
+        period = ""
+        display_grade = ""
+        remarks = ""
+
+        if is_college(grade_level):
+            midterm = str(row.get("Midterm", "")).strip().upper()
+            final = str(row.get("Final", "")).strip().upper()
+
+            if final:
+                period = "Final"
+                display_grade = final
+            else:
+                period = "Midterm"
+                display_grade = midterm
+
+            remarks = compute_college_remarks(display_grade)
+
+            if remarks in ["FAILED", "REPEAT", "INCOMPLETE", "DROPPED"]:
+                is_failed = True
+
+        else:
+            grade = row.get("Final Term Grade")
+
+            try:
+                grade_num = float(grade)
+                display_grade = int(round(grade_num))
+                period = "Average"
+
+                if grade_num < 75:
+                    is_failed = True
+                    remarks = "FAILED"
+
+            except:
+                pass
+
+        if is_failed:
+            failed_records.append({
+                "student_id": student_id,
+                "full_name": row.get("Full Name", ""),
+                "grade_level": row.get("Grade Level", ""),
+                "sport": row.get("Sports Events", ""),
+                "academic_year": row.get("Academic Year", ""),
+                "term": normalize_term(row.get("Term", "")),
+                "period": period,
+                "subject": subject,
+                "grade": display_grade,
+                "remarks": remarks
+            })
+
+    failed_records = sorted(
+        failed_records,
+        key=lambda x: (
+            str(x["full_name"]).lower(),
+            str(x["academic_year"]),
+            str(x["term"]),
+            str(x["subject"]).lower()
+        )
+    )
+
+    grouped_records = {}
+
+    for record in failed_records:
+        student_id = record["student_id"]
+
+        if student_id not in grouped_records:
+            grouped_records[student_id] = {
+                "student_info": record,
+                "subjects": []
+            }
+
+        grouped_records[student_id]["subjects"].append({
+            "term": record["term"],
+            "period": record["period"],
+            "subject": record["subject"],
+            "grade": record["grade"],
+            "remarks": record["remarks"]
+        })
+
+    return render_template(
+        "failed_students.html",
+        grouped_records=grouped_records,
+        show_value=show_value
+    )
+
+@app.route("/delete_grade/<int:row_index>/<student_id>")
+def delete_grade(row_index, student_id):
+
+    if session.get("role") not in ["super_admin", "admin_jhs_shs", "admin_college"]:
+        return redirect("/student_list")
+
+    df = load_data()
+
+    if row_index in df.index:
+        df = df.drop(index=row_index)
+        df.reset_index(drop=True, inplace=True)
+        save_data(df)
+
+    return redirect(f"/edit_grades/{student_id}")
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5050, debug=True)

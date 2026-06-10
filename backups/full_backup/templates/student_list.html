@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
+
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
+        {% endif %}
+
+        <a href="/logout">🚪 Logout</a>
+
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Student List</h2>
+        <h3>Hi, {{ session.get("fullname", session.get("username", "User")) }}</h3>
+    </div>
+
+    <div class="card">
+        <h2>Filter Students</h2>
+
+        <form method="GET">
+            <div class="filter-grid">
+
+                <select name="sport">
+                    <option value="">All Sports</option>
+
+                    {% for s in sports %}
+                    <option value="{{ s }}"
+                        {% if request.args.get('sport') == s %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ s }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <select name="grade_level">
+                    <option value="">All Grade Levels</option>
+
+                    {% for g in grade_levels %}
+                    <option value="{{ g }}"
+                        {% if request.args.get('grade_level') == g %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ g }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <input type="text"
+                       name="search"
+                       placeholder="Search Student Name or ID"
+                       value="{{ request.args.get('search', '') }}">
+
+                <button class="btn" type="submit">Filter</button>
+
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+
+        <div class="table-header">
+            <h2>Student Athletes</h2>
+
+            <a href="/add_student" class="btn">
+                ➕ Add New Student
+            </a>
+        </div>
+
+        <p class="student-count">
+            Total Students: <strong>{{ students|length }}</strong>
+        </p>
+
+        <table class="student-table">
+
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student ID</th>
+                    <th>Full Name</th>
+                    <th>Grade Level</th>
+                    <th>Sport</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for _, row in students.iterrows() %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+
+                    <td class="student-id-col">
+                        {{ row["Student ID"] }}
+                    </td>
+
+                    <td class="name-col subject-text">
+                        {{ row["Full Name"] }}
+                    </td>
+
+                    <td class="grade-col">
+                        {{ row["Grade Level"] }}
+                    </td>
+
+                    <td class="sport-col">
+                        {{ row["Sports Events"] }}
+                    </td>
+
+                    <td class="action-col">
+                        <div class="action-buttons">
+
+                            <a class="table-btn add-btn"
+                                href="/add_grade/{{ row['Student ID'] }}">
+                                    Add Subjects
+                                </a>
+
+                                <a class="table-btn edit-btn"
+                                href="/edit_student/{{ row['Student ID'] }}">
+                                    Edit Profile
+                                </a>
+
+                                <a class="table-btn edit-btn"
+                                href="/monitoring_form_filter/{{ row['Student ID'] }}">
+                                    Monitoring Form
+                                </a>
+
+                            {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+                            <a class="table-btn edit-btn"
+                               href="/edit_grades/{{ row['Student ID'] }}">
+                                Edit
+                            </a>
+                            {% endif %}
+
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>

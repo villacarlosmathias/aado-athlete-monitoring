@@ -780,3 +780,325 @@ td select {
         white-space: nowrap;
     }
 }
+
+/* ==========================
+   FAILED STUDENTS TABLE
+========================== */
+
+.failed-table{
+    width:100%;
+    table-layout:fixed;
+    border-collapse:collapse;
+}
+
+.failed-table th{
+    text-align:center;
+}
+
+.failed-table td{
+    vertical-align:middle;
+    padding:12px;
+}
+
+.failed-table th:nth-child(1),
+.failed-table td:nth-child(1){
+    width:130px;
+}
+
+.failed-table th:nth-child(2),
+.failed-table td:nth-child(2){
+    width:220px;
+    text-align:left;
+}
+
+.failed-table th:nth-child(3),
+.failed-table td:nth-child(3){
+    width:90px;
+}
+
+.failed-table th:nth-child(4),
+.failed-table td:nth-child(4){
+    width:160px;
+}
+
+.failed-table th:nth-child(5),
+.failed-table td:nth-child(5){
+    width:100px;
+}
+
+.failed-table th:nth-child(6),
+.failed-table td:nth-child(6){
+    width:80px;
+}
+
+.failed-table th:nth-child(7),
+.failed-table td:nth-child(7){
+    width:240px;
+    text-align:left;
+}
+
+.failed-table th:nth-child(8),
+.failed-table td:nth-child(8){
+    width:80px;
+    text-align:center;
+}
+
+.failed-table th:nth-child(9),
+.failed-table td:nth-child(9){
+    width:100px;
+    text-align:center;
+    font-weight:bold;
+}
+
+/* =========================
+   GRADES STATUS COLORS
+========================= */
+
+.passed{
+    color: #28a745;
+    font-weight: bold;
+}
+
+.failed{
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.no-grade{
+    color: #ff9800;
+    font-weight: bold;
+}
+
+.passed {
+    color: green !important;
+    font-weight: bold !important;
+}
+
+.failed {
+    color: red !important;
+    font-weight: bold !important;
+}
+
+.no-grade {
+    color: orange !important;
+    font-weight: bold !important;
+}
+
+/* =========================
+   CLEAN REMARKS COLOR ONLY
+========================= */
+
+.grades-table td.passed {
+    color: #1f8f3a !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+}
+
+.grades-table td.failed {
+    color: #d62828 !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+}
+
+.grades-table td.no-grade {
+    color: #f39c12 !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+}
+
+.failed-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.failed-table td,
+.failed-table th {
+    vertical-align: middle;
+}
+
+.failed-table td[rowspan] {
+    vertical-align: middle !important;
+}
+
+.failed-table td:nth-child(7) {
+    text-align: left;
+}
+
+.failed-table td:last-child {
+    color: red;
+    font-weight: bold;
+}
+
+.failed-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.failed-table th,
+.failed-table td {
+    vertical-align: middle !important;
+    text-align: center;
+    padding: 12px 10px;
+    word-wrap: break-word;
+}
+
+.failed-table th:nth-child(1),
+.failed-table td:nth-child(1) {
+    width: 10%;
+}
+
+.failed-table th:nth-child(2),
+.failed-table td:nth-child(2) {
+    width: 17%;
+}
+
+.failed-table th:nth-child(3),
+.failed-table td:nth-child(3) {
+    width: 8%;
+}
+
+.failed-table th:nth-child(4),
+.failed-table td:nth-child(4) {
+    width: 12%;
+}
+
+.failed-table th:nth-child(5),
+.failed-table td:nth-child(5) {
+    width: 9%;
+}
+
+.failed-table th:nth-child(6),
+.failed-table td:nth-child(6) {
+    width: 7%;
+}
+
+.failed-table th:nth-child(7),
+.failed-table td:nth-child(7) {
+    width: 20%;
+    text-align: left;
+}
+
+.failed-table th:nth-child(8),
+.failed-table td:nth-child(8) {
+    width: 6%;
+}
+
+.failed-table th:nth-child(9),
+.failed-table td:nth-child(9) {
+    width: 11%;
+    color: red;
+    font-weight: bold;
+    text-align: center;
+    white-space: normal;
+}
+
+.failed-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.failed-table th,
+.failed-table td {
+    vertical-align: middle !important;
+    text-align: center;
+    padding: 10px 8px;
+    word-wrap: break-word;
+}
+
+.failed-table td[rowspan] {
+    vertical-align: middle !important;
+}
+
+.failed-table .student-name {
+    font-weight: 700;
+    text-align: left;
+}
+
+.failed-table .failed-subject {
+    text-align: left;
+    font-weight: 600;
+}
+
+.failed-table .failed-remarks {
+    color: red;
+    font-weight: 700;
+    text-align: center;
+    white-space: normal;
+}
+
+.failed-table th:nth-child(1) { width: 9%; }
+.failed-table th:nth-child(2) { width: 15%; }
+.failed-table th:nth-child(3) { width: 8%; }
+.failed-table th:nth-child(4) { width: 11%; }
+.failed-table th:nth-child(5) { width: 8%; }
+.failed-table th:nth-child(6) { width: 7%; }
+.failed-table th:nth-child(7) { width: 7%; }
+.failed-table th:nth-child(8) { width: 19%; }
+.failed-table th:nth-child(9) { width: 6%; }
+.failed-table th:nth-child(10) { width: 10%; }
+
+.failed-table-main {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.failed-table-main th,
+.failed-table-main td {
+    vertical-align: middle !important;
+    text-align: center;
+    padding: 10px;
+}
+
+.failed-table-main th:nth-child(1) { width: 10%; }
+.failed-table-main th:nth-child(2) { width: 16%; }
+.failed-table-main th:nth-child(3) { width: 8%; }
+.failed-table-main th:nth-child(4) { width: 12%; }
+.failed-table-main th:nth-child(5) { width: 9%; }
+.failed-table-main th:nth-child(6) { width: 45%; }
+
+.failed-table-main .student-name {
+    text-align: left;
+    font-weight: 700;
+}
+
+.inner-failed-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin: 0;
+}
+
+.inner-failed-table th,
+.inner-failed-table td {
+    padding: 8px 6px;
+    border: 1px solid #ddd;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 13px;
+}
+
+.inner-failed-table th {
+    background: #2f63b7;
+    color: white;
+    font-weight: 700;
+}
+
+.inner-failed-table th:nth-child(1) { width: 14%; }
+.inner-failed-table th:nth-child(2) { width: 16%; }
+.inner-failed-table th:nth-child(3) { width: 42%; }
+.inner-failed-table th:nth-child(4) { width: 12%; }
+.inner-failed-table th:nth-child(5) { width: 16%; }
+
+.inner-failed-table .subject-name {
+    text-align: left;
+    font-weight: 600;
+}
+
+.inner-failed-table .grade-text,
+.inner-failed-table .remarks-text {
+    color: red;
+    font-weight: 700;
+}

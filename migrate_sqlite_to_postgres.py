@@ -1,29 +1,27 @@
-import os
 import pandas as pd
-import sqlite3
 from sqlalchemy import create_engine
 
-SQLITE_FILE = "database.db"
+sqlite_engine = create_engine("sqlite:///database.db")
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-if not DATABASE_URL:
-    print("ERROR: DATABASE_URL is not set.")
-    exit()
-
-sqlite_conn = sqlite3.connect(SQLITE_FILE)
-df = pd.read_sql_query("SELECT * FROM grades", sqlite_conn)
-sqlite_conn.close()
-
-print(f"Loaded {len(df)} rows from SQLite.")
-
-engine = create_engine(DATABASE_URL)
-
-df.to_sql(
-    "grades",
-    engine,
-    if_exists="replace",
-    index=False
+postgres_engine = create_engine(
+    "postgresql+psycopg2://aado_admin:Aado123!@localhost:5432/aado_db"
 )
 
-print("Migration complete. SQLite data copied to PostgreSQL.")
+for table in ["users", "sports", "grades"]:
+    print(f"Migrating {table}...")
+
+    df = pd.read_sql_query(
+        f'SELECT * FROM "{table}"',
+        sqlite_engine
+    )
+
+    df.to_sql(
+        table,
+        postgres_engine,
+        if_exists="replace",
+        index=False
+    )
+
+    print(f"Done {table}: {len(df)} records")
+
+print("Migration completed.")

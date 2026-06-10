@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reports</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+
+        {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+            <a href="/failed_students">⚠️ Failed Students</a>
+        {% endif %}
+
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+        {% endif %}
+
+        <a href="/logout">🚪 Logout</a>
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Reports</h2>
+        <h3>Hi, {{ session.get("fullname", session.get("username", "User")) }}</h3>
+    </div>
+
+    <div class="cards">
+
+        <div class="dashboard-card blue">
+            <h3>Total Athletes</h3>
+            <h1>{{ total_students }}</h1>
+            <p>All filtered records</p>
+        </div>
+
+        {% if session.get("role") != "admin_college" %}
+        <div class="dashboard-card green">
+            <h3>JHS Athletes</h3>
+            <h1>{{ total_jhs }}</h1>
+            <p>Grade 7 - 10</p>
+        </div>
+
+        <div class="dashboard-card orange">
+            <h3>SHS Athletes</h3>
+            <h1>{{ total_shs }}</h1>
+            <p>Grade 11 - 12</p>
+        </div>
+        {% endif %}
+
+        <div class="dashboard-card red">
+            <h3>College Athletes</h3>
+            <h1>{{ total_college }}</h1>
+            <p>College level</p>
+        </div>
+
+    </div>
+
+    <div class="card">
+        <h2>Export PDF Reports</h2>
+
+        <form method="GET" action="/export_pdf">
+            <div class="filter-grid">
+
+                {% if session.get("role") == "admin_college" %}
+                    <input type="hidden" name="level" value="COLLEGE">
+                    <input type="hidden" name="grade_level" value="College">
+                {% else %}
+                    <select name="level" class="level-select">
+                        <option value="ALL">All Levels</option>
+                        <option value="JHS">JHS Only</option>
+                        <option value="SHS">SHS Only</option>
+                        <option value="COLLEGE">College Only</option>
+                    </select>
+                {% endif %}
+
+                <select name="sport" class="sport-select">
+                    <option value="">All Sports</option>
+                    {% for sport in sports %}
+                        <option value="{{ sport }}">{{ sport }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="academic_year">
+                    <option value="">All Academic Years</option>
+                    {% for ay in academic_years %}
+                        <option value="{{ ay }}">{{ ay }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="term">
+                    <option value="">All Terms</option>
+                    <option value="TERM 1">Term 1</option>
+                    <option value="TERM 2">Term 2</option>
+                    <option value="TERM 3">Term 3</option>
+                </select>
+
+                {% if session.get("role") != "admin_college" %}
+                <select name="grade_level">
+                    <option value="">All Grade Levels</option>
+                    {% for grade in grade_levels %}
+                        <option value="{{ grade }}">{{ grade }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+
+                <button class="btn" type="submit">Export PDF</button>
+
+            </div>
+        </form>
+    </div>
+
+    {% if session.get("role") != "admin_college" %}
+    <div class="card">
+        <h2>Academic Intervention Reports</h2>
+
+        <form method="GET" action="/intervention_report">
+            <div class="filter-grid">
+
+                <select name="type">
+                    <option value="remedial">Remedial Report</option>
+                    <option value="load_revision">Load Revision Report</option>
+                </select>
+
+                <select name="level" class="level-select">
+                    <option value="ALL">All Levels</option>
+                    <option value="JHS">JHS Only</option>
+                    <option value="SHS">SHS Only</option>
+                </select>
+
+                <select name="sport" class="sport-select">
+                    <option value="">All Sports</option>
+                    {% for sport in sports %}
+                        <option value="{{ sport }}">{{ sport }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="academic_year">
+                    <option value="">All Academic Years</option>
+                    {% for ay in academic_years %}
+                        <option value="{{ ay }}">{{ ay }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="term">
+                    <option value="">All Terms</option>
+                    <option value="TERM 1">Term 1</option>
+                    <option value="TERM 2">Term 2</option>
+                    <option value="TERM 3">Term 3</option>
+                </select>
+
+                <select name="grade_level">
+                    <option value="">All Grade Levels</option>
+                    {% for grade in grade_levels %}
+                        <option value="{{ grade }}">{{ grade }}</option>
+                    {% endfor %}
+                </select>
+
+                <button class="btn" type="submit">Export Intervention Report</button>
+
+            </div>
+        </form>
+
+        <p style="margin-top: 15px; color: gray; font-size: 14px;">
+            <b>Remedial:</b> Final Grade 71 - 74
+            <br><br>
+            <b>Load Revision:</b> Final Grade 70 pababa
+        </p>
+    </div>
+    {% endif %}
+
+    {% if session.get("role") in ["super_admin", "admin_college"] %}
+    <div class="card">
+        <h2>College Deficiency Report</h2>
+
+        <form method="GET" action="/college_deficiency_report">
+            <div class="filter-grid">
+
+                <select name="sport">
+                    <option value="">All College Sports</option>
+                    {% for sport in sports %}
+                        <option value="{{ sport }}">{{ sport }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="academic_year">
+                    <option value="">All Academic Years</option>
+                    {% for ay in academic_years %}
+                        <option value="{{ ay }}">{{ ay }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="term">
+                    <option value="">All Terms</option>
+                    <option value="TERM 1">Term 1</option>
+                    <option value="TERM 2">Term 2</option>
+                    <option value="TERM 3">Term 3</option>
+                </select>
+
+                <button class="btn" type="submit">
+                    Generate College Deficiency Report
+                </button>
+
+            </div>
+        </form>
+
+        <p style="margin-top: 15px; color: gray; font-size: 14px;">
+            This report shows college athletes with <b>INC</b>, <b>R</b>, <b>0.00</b>, and <b>DROP</b>.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2>Print Student Lists</h2>
+
+        <form action="/print_students" method="GET">
+            <div class="filter-grid">
+
+                {% if session.get("role") == "admin_college" %}
+                    <input type="hidden" name="grade_level" value="College">
+                    <select disabled>
+                        <option selected>College</option>
+                    </select>
+                {% else %}
+                    <select name="grade_level">
+                        <option value="">All Grade Levels</option>
+                        {% for grade in grade_levels %}
+                            <option value="{{ grade }}">{{ grade }}</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+
+                <select name="sport">
+                    <option value="">All Sports</option>
+                    {% for sport in sports %}
+                        <option value="{{ sport }}">{{ sport }}</option>
+                    {% endfor %}
+                </select>
+
+                <button class="btn" type="submit">
+                    🖨 Print Student List
+                </button>
+
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+const allSports = {{ sports|tojson|safe }};
+const jhsSports = {{ jhs_sports|tojson|safe }};
+const shsSports = {{ shs_sports|tojson|safe }};
+
+function updateSportDropdown(levelSelect) {
+    const form = levelSelect.closest("form");
+    const sportSelect = form.querySelector(".sport-select");
+
+    if (!sportSelect) {
+        return;
+    }
+
+    const selectedLevel = levelSelect.value;
+    let sportsList = allSports;
+
+    if (selectedLevel === "JHS") {
+        sportsList = jhsSports;
+    } else if (selectedLevel === "SHS") {
+        sportsList = shsSports;
+    }
+
+    sportSelect.innerHTML = "";
+
+    const allOption = document.createElement("option");
+    allOption.value = "";
+    allOption.textContent = "All Sports";
+    sportSelect.appendChild(allOption);
+
+    sportsList.forEach(function(sport) {
+        const option = document.createElement("option");
+        option.value = sport;
+        option.textContent = sport;
+        sportSelect.appendChild(option);
+    });
+}
+
+document.querySelectorAll(".level-select").forEach(function(levelSelect) {
+    levelSelect.addEventListener("change", function() {
+        updateSportDropdown(levelSelect);
+    });
+});
+</script>
+
+</body>
+</html>

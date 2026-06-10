@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Subject Grades</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
+
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
+        {% endif %}
+
+        <a href="/logout">🚪 Logout</a>
+    </div>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <h2>Add Subject Grades</h2>
+        <h3>Hi, {{ session.get("fullname", session.get("username", "User")) }}</h3>
+    </div>
+
+    <div class="card">
+        <h2>Student Information</h2>
+
+        <p><b>Student ID:</b> {{ show_value(student.get("Student ID")) }}</p>
+        <p><b>Name:</b> {{ show_value(student.get("Full Name")) }}</p>
+        <p><b>Grade Level:</b> {{ show_value(student.get("Grade Level")) }}</p>
+
+        {% if student_level == "COLLEGE" %}
+            <p><b>Year Level:</b> {{ show_value(student.get("Year Level")) }}</p>
+            <p><b>Course / Program:</b> {{ show_value(student.get("Course / Program")) }}</p>
+            <p><b>College / Department:</b> {{ show_value(student.get("College")) }}</p>
+        {% else %}
+            <p><b>Section:</b> {{ show_value(student.get("Section")) }}</p>
+            <p><b>Strand:</b> {{ show_value(student.get("Strand")) }}</p>
+        {% endif %}
+
+        <p><b>Sport:</b> {{ show_value(student.get("Sports Events")) }}</p>
+    </div>
+
+    <div class="card">
+
+        {% if student_level == "COLLEGE" %}
+            <h2>Add College Subjects</h2>
+        {% else %}
+            <h2>Add Subjects / Grades</h2>
+        {% endif %}
+
+        <form method="POST">
+
+            <label>Academic Year</label>
+            <input
+                type="text"
+                name="academic_year"
+                value="{{ show_value(student.get('Academic Year')) if show_value(student.get('Academic Year')) else '2026-2027' }}"
+                required
+            >
+
+            {% if student_level == "JHS" %}
+
+            <table id="gradesTable" class="grades-table">
+                <tr>
+                    <th>Subject</th>
+                    <th>Term</th>
+
+                    {% if session.get("role") != "assistant" %}
+                        <th>Q1</th>
+                        <th>Q2</th>
+                        <th>Q3</th>
+                        <th>Q4</th>
+                    {% endif %}
+
+                    <th>Action</th>
+                </tr>
+
+                <tr>
+                    <td><input type="text" name="subject[]" required></td>
+
+                    <td>
+                        <select name="term[]" required>
+                            <option value="1ST TERM">1ST TERM</option>
+                            <option value="2ND TERM">2ND TERM</option>
+                            <option value="3RD TERM">3RD TERM</option>
+                            <option value="4TH TERM">4TH TERM</option>
+                        </select>
+                    </td>
+
+                    {% if session.get("role") != "assistant" %}
+                        <td><input type="number" step="0.01" name="q1[]"></td>
+                        <td><input type="number" step="0.01" name="q2[]"></td>
+                        <td><input type="number" step="0.01" name="q3[]"></td>
+                        <td><input type="number" step="0.01" name="q4[]"></td>
+                    {% endif %}
+
+                    <td>
+                        <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                    </td>
+
+                    <input type="hidden" name="subject_section[]" value="">
+                    <input type="hidden" name="midterm[]" value="">
+                    <input type="hidden" name="final[]" value="">
+
+                    {% if session.get("role") == "assistant" %}
+                        <input type="hidden" name="q1[]" value="">
+                        <input type="hidden" name="q2[]" value="">
+                        <input type="hidden" name="q3[]" value="">
+                        <input type="hidden" name="q4[]" value="">
+                    {% endif %}
+                </tr>
+            </table>
+
+            {% elif student_level == "SHS" %}
+
+            <table id="gradesTable" class="grades-table">
+                <tr>
+                    <th>Subject</th>
+                    <th>Term</th>
+
+                    {% if session.get("role") != "assistant" %}
+                        <th>Midterm</th>
+                        <th>Final</th>
+                    {% endif %}
+
+                    <th>Action</th>
+                </tr>
+
+                <tr>
+                    <td><input type="text" name="subject[]" required></td>
+
+                    <td>
+                        <select name="term[]" required>
+                            <option value="1ST TERM">1ST TERM</option>
+                            <option value="2ND TERM">2ND TERM</option>
+                            <option value="3RD TERM">3RD TERM</option>
+                            <option value="4TH TERM">4TH TERM</option>
+                        </select>
+                    </td>
+
+                    {% if session.get("role") != "assistant" %}
+                        <td><input type="number" step="0.01" name="midterm[]"></td>
+                        <td><input type="number" step="0.01" name="final[]"></td>
+                    {% endif %}
+
+                    <td>
+                        <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                    </td>
+
+                    <input type="hidden" name="subject_section[]" value="">
+                    <input type="hidden" name="q1[]" value="">
+                    <input type="hidden" name="q2[]" value="">
+                    <input type="hidden" name="q3[]" value="">
+                    <input type="hidden" name="q4[]" value="">
+
+                    {% if session.get("role") == "assistant" %}
+                        <input type="hidden" name="midterm[]" value="">
+                        <input type="hidden" name="final[]" value="">
+                    {% endif %}
+                </tr>
+            </table>
+
+            {% else %}
+
+            <table id="gradesTable" class="grades-table">
+                <tr>
+                    <th>Subject</th>
+                    <th>Section</th>
+                    <th>Term</th>
+
+                    {% if session.get("role") != "assistant" %}
+                        <th>Midterm</th>
+                        <th>Final</th>
+                        <th>Remarks</th>
+                    {% endif %}
+
+                    <th>Action</th>
+                </tr>
+
+                <tr>
+                    <td>
+                        <input type="text" name="subject[]" required>
+                    </td>
+
+                    <td>
+                        <input type="text" name="subject_section[]" placeholder="Example: BSIT-1A">
+                    </td>
+
+                    <td>
+                        <select name="term[]" required>
+                            <option value="Term 1">Term 1</option>
+                            <option value="Term 2">Term 2</option>
+                            <option value="Term 3">Term 3</option>
+                        </select>
+                    </td>
+
+                    {% if session.get("role") != "assistant" %}
+                        <td>
+                            <select name="midterm[]">
+                                <option value="">Select Grade</option>
+                                <option value="4.00">4.00</option>
+                                <option value="3.50">3.50</option>
+                                <option value="3.00">3.00</option>
+                                <option value="2.50">2.50</option>
+                                <option value="2.00">2.00</option>
+                                <option value="1.50">1.50</option>
+                                <option value="1.00">1.00</option>
+                                <option value="0.00">0.00</option>
+                                <option value="R">R</option>
+                                <option value="INC">INC</option>
+                                <option value="Drop">Drop</option>
+                            </select>
+                        </td>
+
+                        <td>
+                            <select name="final[]">
+                                <option value="">Select Grade</option>
+                                <option value="4.00">4.00</option>
+                                <option value="3.50">3.50</option>
+                                <option value="3.00">3.00</option>
+                                <option value="2.50">2.50</option>
+                                <option value="2.00">2.00</option>
+                                <option value="1.50">1.50</option>
+                                <option value="1.00">1.00</option>
+                                <option value="0.00">0.00</option>
+                                <option value="R">R</option>
+                                <option value="INC">INC</option>
+                                <option value="Drop">Drop</option>
+                            </select>
+                        </td>
+
+                        <td>Auto</td>
+                    {% endif %}
+
+                    <td>
+                        <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                    </td>
+
+                    <input type="hidden" name="q1[]" value="">
+                    <input type="hidden" name="q2[]" value="">
+                    <input type="hidden" name="q3[]" value="">
+                    <input type="hidden" name="q4[]" value="">
+
+                    {% if session.get("role") == "assistant" %}
+                        <input type="hidden" name="midterm[]" value="">
+                        <input type="hidden" name="final[]" value="">
+                    {% endif %}
+                </tr>
+            </table>
+
+            {% endif %}
+
+            <div style="margin-top: 20px;">
+                <button type="button" class="table-btn add-btn" onclick="addRow()">
+                    ➕ Add Row
+                </button>
+
+                <button type="submit" class="btn">
+                    Save Subjects
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+function collegeGradeOptions() {
+    return `
+        <option value="">Select Grade</option>
+        <option value="4.00">4.00</option>
+        <option value="3.50">3.50</option>
+        <option value="3.00">3.00</option>
+        <option value="2.50">2.50</option>
+        <option value="2.00">2.00</option>
+        <option value="1.50">1.50</option>
+        <option value="1.00">1.00</option>
+        <option value="0.00">0.00</option>
+        <option value="R">R</option>
+        <option value="INC">INC</option>
+        <option value="Drop">Drop</option>
+    `;
+}
+
+function addRow() {
+    let table = document.getElementById("gradesTable");
+    let row = table.insertRow(-1);
+
+    let studentLevel = "{{ student_level }}";
+    let userRole = "{{ session.get('role') }}";
+    let isAssistant = userRole === "assistant";
+
+    if (studentLevel === "JHS") {
+
+        if (isAssistant) {
+            row.innerHTML = `
+                <td><input type="text" name="subject[]" required></td>
+
+                <td>
+                    <select name="term[]" required>
+                        <option value="1ST TERM">1ST TERM</option>
+                        <option value="2ND TERM">2ND TERM</option>
+                        <option value="3RD TERM">3RD TERM</option>
+                        <option value="4TH TERM">4TH TERM</option>
+                    </select>
+                </td>
+
+                <td>
+                    <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                </td>
+
+                <input type="hidden" name="subject_section[]" value="">
+                <input type="hidden" name="q1[]" value="">
+                <input type="hidden" name="q2[]" value="">
+                <input type="hidden" name="q3[]" value="">
+                <input type="hidden" name="q4[]" value="">
+                <input type="hidden" name="midterm[]" value="">
+                <input type="hidden" name="final[]" value="">
+            `;
+        } else {
+            row.innerHTML = `
+                <td><input type="text" name="subject[]" required></td>
+
+                <td>
+                    <select name="term[]" required>
+                        <option value="1ST TERM">1ST TERM</option>
+                        <option value="2ND TERM">2ND TERM</option>
+                        <option value="3RD TERM">3RD TERM</option>
+                        <option value="4TH TERM">4TH TERM</option>
+                    </select>
+                </td>
+
+                <td><input type="number" step="0.01" name="q1[]"></td>
+                <td><input type="number" step="0.01" name="q2[]"></td>
+                <td><input type="number" step="0.01" name="q3[]"></td>
+                <td><input type="number" step="0.01" name="q4[]"></td>
+
+                <td>
+                    <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                </td>
+
+                <input type="hidden" name="subject_section[]" value="">
+                <input type="hidden" name="midterm[]" value="">
+                <input type="hidden" name="final[]" value="">
+            `;
+        }
+    }
+
+    else if (studentLevel === "SHS") {
+
+        if (isAssistant) {
+            row.innerHTML = `
+                <td><input type="text" name="subject[]" required></td>
+
+                <td>
+                    <select name="term[]" required>
+                        <option value="1ST TERM">1ST TERM</option>
+                        <option value="2ND TERM">2ND TERM</option>
+                        <option value="3RD TERM">3RD TERM</option>
+                        <option value="4TH TERM">4TH TERM</option>
+                    </select>
+                </td>
+
+                <td>
+                    <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                </td>
+
+                <input type="hidden" name="subject_section[]" value="">
+                <input type="hidden" name="midterm[]" value="">
+                <input type="hidden" name="final[]" value="">
+                <input type="hidden" name="q1[]" value="">
+                <input type="hidden" name="q2[]" value="">
+                <input type="hidden" name="q3[]" value="">
+                <input type="hidden" name="q4[]" value="">
+            `;
+        } else {
+            row.innerHTML = `
+                <td><input type="text" name="subject[]" required></td>
+
+                <td>
+                    <select name="term[]" required>
+                        <option value="1ST TERM">1ST TERM</option>
+                        <option value="2ND TERM">2ND TERM</option>
+                        <option value="3RD TERM">3RD TERM</option>
+                        <option value="4TH TERM">4TH TERM</option>
+                    </select>
+                </td>
+
+                <td><input type="number" step="0.01" name="midterm[]"></td>
+                <td><input type="number" step="0.01" name="final[]"></td>
+
+                <td>
+                    <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                </td>
+
+                <input type="hidden" name="subject_section[]" value="">
+                <input type="hidden" name="q1[]" value="">
+                <input type="hidden" name="q2[]" value="">
+                <input type="hidden" name="q3[]" value="">
+                <input type="hidden" name="q4[]" value="">
+            `;
+        }
+    }
+
+    else {
+
+        if (isAssistant) {
+            row.innerHTML = `
+                <td>
+                    <input type="text" name="subject[]" required>
+                </td>
+
+                <td>
+                    <input type="text" name="subject_section[]" placeholder="Example: BSIT-1A">
+                </td>
+
+                <td>
+                    <select name="term[]" required>
+                        <option value="Term 1">Term 1</option>
+                        <option value="Term 2">Term 2</option>
+                        <option value="Term 3">Term 3</option>
+                    </select>
+                </td>
+
+                <td>
+                    <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                </td>
+
+                <input type="hidden" name="midterm[]" value="">
+                <input type="hidden" name="final[]" value="">
+                <input type="hidden" name="q1[]" value="">
+                <input type="hidden" name="q2[]" value="">
+                <input type="hidden" name="q3[]" value="">
+                <input type="hidden" name="q4[]" value="">
+            `;
+        } else {
+            row.innerHTML = `
+                <td>
+                    <input type="text" name="subject[]" required>
+                </td>
+
+                <td>
+                    <input type="text" name="subject_section[]" placeholder="Example: BSIT-1A">
+                </td>
+
+                <td>
+                    <select name="term[]" required>
+                        <option value="Term 1">Term 1</option>
+                        <option value="Term 2">Term 2</option>
+                        <option value="Term 3">Term 3</option>
+                    </select>
+                </td>
+
+                <td>
+                    <select name="midterm[]">
+                        ${collegeGradeOptions()}
+                    </select>
+                </td>
+
+                <td>
+                    <select name="final[]">
+                        ${collegeGradeOptions()}
+                    </select>
+                </td>
+
+                <td>Auto</td>
+
+                <td>
+                    <button type="button" class="table-btn delete-btn" onclick="removeRow(this)">Remove</button>
+                </td>
+
+                <input type="hidden" name="q1[]" value="">
+                <input type="hidden" name="q2[]" value="">
+                <input type="hidden" name="q3[]" value="">
+                <input type="hidden" name="q4[]" value="">
+            `;
+        }
+    }
+}
+
+function removeRow(button) {
+    let table = document.getElementById("gradesTable");
+
+    if (table.rows.length <= 2) {
+        alert("At least one row is required.");
+        return;
+    }
+
+    button.closest("tr").remove();
+}
+</script>
+
+</body>
+</html>

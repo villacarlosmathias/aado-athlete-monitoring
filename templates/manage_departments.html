@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Departments</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <h1>NUNSIS</h1>
+        <h2>Athletes' Academic Development Office</h2>
+    </div>
+
+    <div class="menu">
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
+
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
+
+        {% if session.get("role") != "assistant" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
+
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
+        {% endif %}
+
+        <a href="/logout">🚪 Logout</a>
+
+    </div>
+</div>
+
+<div class="main">
+    <div class="topbar">
+        <h2>Manage Departments</h2>
+        <h3>Hi, {{ session.get("username", "User") }}</h3>
+    </div>
+
+    <div class="card">
+        <h2>Add Department / College</h2>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Department / College Name</label>
+                <input type="text" name="department_name" placeholder="Example: College of Computing" required>
+            </div>
+
+            <button class="btn" type="submit">Add Department</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Department List</h2>
+
+        <table class="grades-table">
+            <tr>
+                <th>ID</th>
+                <th>Department / College</th>
+                <th>Action</th>
+            </tr>
+
+            {% for department in departments %}
+            <tr>
+                <td>{{ department[0] }}</td>
+                <td>{{ department[1] }}</td>
+                <td>
+                    <a class="table-btn delete-btn"
+                       href="/delete_department/{{ department[0] }}"
+                       onclick="return confirm('Delete this department?')">
+                        Delete
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

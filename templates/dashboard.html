@@ -15,25 +15,27 @@
 
     <div class="menu">
 
-    {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
-        <a href="/">🏠 Dashboard</a>
-    {% endif %}
+        {% if session.get("role") != "assistant" %}
+            <a href="/">🏠 Dashboard</a>
+        {% endif %}
 
-    <a href="/student_list">👥 Student List</a>
-    <a href="/add_student">➕ Add New Student</a>
+        <a href="/student_list">👥 Student List</a>
+        <a href="/add_student">➕ Add New Student</a>
 
-    {% if session.get("role") in ["super_admin", "admin_jhs_shs", "admin_college"] %}
-        <a href="/grades">📘 Grades</a>
-        <a href="/reports">📊 Reports</a>
-    {% endif %}
+        {% if session.get("role") != "assistant" %}
+            <a href="/grades">📘 Grades</a>
+            <a href="/reports">📊 Reports</a>
+        {% endif %}
 
-    {% if session.get("role") == "super_admin" %}
-        <a href="/promote_students">⬆️ Promote Students</a>
-        <a href="/manage_accounts">👤 Manage Accounts</a>
-        <a href="/manage_sports">🏅 Manage Sports</a>
-    {% endif %}
+        {% if session.get("role") == "super_admin" %}
+            <a href="/promote_students">⬆️ Promote Students</a>
+            <a href="/manage_accounts">👤 Manage Accounts</a>
+            <a href="/manage_sports">🏅 Manage Sports</a>
+            <a href="/manage_departments">🏫 Manage Departments</a>
+            <a href="/manage_programs">📚 Manage Programs</a>
+        {% endif %}
 
-    <a href="/logout">🚪 Logout</a>
+        <a href="/logout">🚪 Logout</a>
 
     </div>
 </div>
@@ -47,29 +49,41 @@
 
     <div class="cards">
 
-        <div class="dashboard-card blue">
-            <h3>Total Student Athletes</h3>
-            <h1>{{ total_students }}</h1>
-            <p>All athletes</p>
-        </div>
+        <!-- TOTAL STUDENTS -->
+        <a href="/student_list" style="text-decoration:none; color:inherit;">
+            <div class="dashboard-card blue">
+                <h3>Total Student Athletes</h3>
+                <h1>{{ total_students }}</h1>
+                <p>All athletes</p>
+            </div>
+        </a>
 
-        <div class="dashboard-card green">
-            <h3>Passed Students</h3>
-            <h1>{{ passed_students }}</h1>
-            <p>No failing grades</p>
-        </div>
+        <!-- PASSED STUDENTS -->
+        <a href="/passed_students" style="text-decoration:none; color:inherit;">
+            <div class="dashboard-card green">
+                <h3>Passed Students</h3>
+                <h1>{{ passed_students }}</h1>
+                <p>No failing grades</p>
+            </div>
+        </a>
 
-        <div class="dashboard-card red">
-            <h3>Failed Students</h3>
-            <h1>{{ failed_students }}</h1>
-            <p>Needs monitoring</p>
-        </div>
+        <!-- FAILED STUDENTS -->
+        <a href="/failed_students" style="text-decoration:none; color:inherit;">
+            <div class="dashboard-card red">
+                <h3>Failed Students</h3>
+                <h1>{{ failed_students }}</h1>
+                <p>Needs monitoring</p>
+            </div>
+        </a>
 
-        <div class="dashboard-card orange">
-            <h3>Sports Events</h3>
-            <h1>{{ total_sports }}</h1>
-            <p>Total sports</p>
-        </div>
+        <!-- SPORTS EVENTS -->
+        <a href="/manage_sports" style="text-decoration:none; color:inherit;">
+            <div class="dashboard-card orange">
+                <h3>Sports Events</h3>
+                <h1>{{ total_sports }}</h1>
+                <p>Total sports</p>
+            </div>
+        </a>
 
     </div>
 
