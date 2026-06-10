@@ -1,0 +1,5 @@
+AADO_FULL_BACKUP.zip
+*.db
+backups/
+__pycache__/
+.env
